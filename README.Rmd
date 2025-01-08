@@ -1,0 +1,82 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+
+  library(magrittr)
+
+```
+
+# `envDistribution`: an R package to help clean large unstructured data set(s)
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of `envDistribution` is to help create, source and work with species distributions (i.e. geographic ranges), where the ultimate goal is to use distributions to clean species occurrence data for use in Species Distribution Models (SDMs) or IUCN Red List threatened status type assessments.
+
+
+## Installation
+
+`envDistribution` is not on [CRAN](https://CRAN.R-project.org).
+
+You can install the development version from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("Acanthiza/envDistribution")
+```
+
+## Contents of `envDistribution`
+
+The following functions and data sets are provided in `envDistribution`. 
+
+```{r, echo = FALSE, warning = FALSE}
+
+  get_name_title <- function(text) {
+    
+    tibble::enframe(text
+                    , name = NULL
+                    , value = "description"
+                    ) %>%
+      dplyr::filter(grepl("title", description)) %>%
+      dplyr::mutate(description = gsub("\\\\|title", "", description)
+                    , description = gsub("^\\{|\\}$", "", description)
+                    )
+    
+  }
+
+  manuals <- fs::dir_info("man") %>%
+    dplyr::select(path) %>%
+    dplyr::filter(grepl("Rd$", path)
+                  , !grepl("pipe", path)
+                  ) %>%
+    dplyr::mutate(object = gsub("man\\/|\\.Rd","",path)
+                  , class = purrr::map_chr(object, ~envFunc::vec_to_sentence(class(get(.))))
+                  , text = purrr::map(path, readLines)
+                  , text = purrr::map(text, get_name_title)
+                  , object = paste0("envDistribution::"
+                                    , object
+                                    , ""
+                                    )
+                  , object = dplyr::if_else(class == "function"
+                                            , paste0(object
+                                                     , "()"
+                                                     )
+                                            , object
+                                            )
+                  , object = paste0("`", object, "`")
+                  ) %>%
+    tidyr::unnest(cols = c(text))
+
+  knitr::kable(manuals[,2:4])
+
+```

@@ -1,0 +1,44 @@
+Package: envDistribution
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    c(
+    person(given = "Joel", family = "Allan"
+    , role = c("aut", "cre")
+    , email = "joel.allan@sa.gov.au"
+    ),
+    person(given = "Nigel", family = "Willoughby"
+    , role = c("aut")
+    , email = "nigel.willoughby@sa.gov.au"
+    ),
+    person(family = "DEW"
+    , role = "cph"
+    )
+    )
+Description: Functions for sourcing, creating and working with species distributions (geographic ranges).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    arrow,
+    ConR,
+    dplyr,
+    envSDM,
+    fs,
+    nngeo,
+    purrr,
+    rio,
+    rlang,
+    sf,
+    sfarrow,
+    stringr,
+    tibble,
+    tidyr,
+    tools
+Depends: 
+    R (>= 4.4)
+Suggests: 
+    envClean (>= 0.0.0.9000)
+Remotes:  
+    github::Acanthiza/envClean
