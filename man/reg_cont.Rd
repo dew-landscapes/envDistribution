@@ -20,7 +20,7 @@ reg_cont(
   use_ConR = TRUE,
   cell_size = 2,
   num_rast_pos = 0,
-  clip = use_clip
+  clip = NULL
 )
 }
 \arguments{

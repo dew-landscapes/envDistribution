@@ -1,5 +1,5 @@
 
-#' Grid around records
+#' Make grid around occurrence records
 #'
 #' Usually used as Area of Occupancy (AOO) estimate for a taxa.
 #'

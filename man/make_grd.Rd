@@ -2,7 +2,7 @@
 % Please edit documentation in R/make_grd.R
 \name{make_grd}
 \alias{make_grd}
-\title{Grid around records}
+\title{Make grid around occurrence records}
 \usage{
 make_grd(
   presence,

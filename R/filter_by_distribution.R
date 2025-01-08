@@ -1,4 +1,5 @@
 #' Filter species occurrence records by spatial layers representing their distributions at state and or national scales.
+#'
 #' e.g. IUCN Red List or EPBC (Environmental Protection and Biodiversity Conservation act) distributions.
 #'
 #' @param presence Dataframe of presences for a taxa (i.e. containing x,y coordinate columns).

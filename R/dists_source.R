@@ -1,4 +1,5 @@
 #' Find file path to relevant taxa distribution (geographic range) parquet files.
+#'
 #' For use inside filter_by_distribution and fix_spatial_taxonomy functions,
 #' and for any other situation needing to return relevant distribution file paths per taxa (e.g. for aoi-taxa and dist in envPIA).
 #'

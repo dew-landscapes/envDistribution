@@ -2,7 +2,7 @@
 % Please edit documentation in R/make_mcp.R
 \name{make_mcp}
 \alias{make_mcp}
-\title{Minimum convex polygon around records}
+\title{Make minimum convex polygon (MCP) around occurrence records}
 \usage{
 make_mcp(
   presence,

@@ -2,9 +2,7 @@
 % Please edit documentation in R/dists_source.R
 \name{dists_source}
 \alias{dists_source}
-\title{Find file path to relevant taxa distribution (geographic range) parquet files.
-For use inside filter_by_distribution and fix_spatial_taxonomy functions,
-and for any other situation needing to return relevant distribution file paths per taxa (e.g. for aoi-taxa and dist in envPIA).}
+\title{Find file path to relevant taxa distribution (geographic range) parquet files.}
 \usage{
 dists_source(
   distrib_dir = fs::path("H:", "data"),
@@ -55,7 +53,6 @@ If !is.null(source_scales), there will be a file column per scale (e.g. national
 If standardise_taxonomy == TRUE, the output taxa column will be 'taxa' and not 'original_name'.
 }
 \description{
-Find file path to relevant taxa distribution (geographic range) parquet files.
 For use inside filter_by_distribution and fix_spatial_taxonomy functions,
 and for any other situation needing to return relevant distribution file paths per taxa (e.g. for aoi-taxa and dist in envPIA).
 }

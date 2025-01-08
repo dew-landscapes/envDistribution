@@ -1,5 +1,5 @@
 
-#' Minimum convex polygon around records
+#' Make minimum convex polygon (MCP) around occurrence records
 #'
 #' Usually used as predict boundary or an Extent of Occurrence (EOO) estimate for a taxa.
 #'

@@ -2,8 +2,7 @@
 % Please edit documentation in R/filter_by_distribution.R
 \name{filter_by_distribution}
 \alias{filter_by_distribution}
-\title{Filter species occurrence records by spatial layers representing their distributions at state and or national scales.
-e.g. IUCN Red List or EPBC (Environmental Protection and Biodiversity Conservation act) distributions.}
+\title{Filter species occurrence records by spatial layers representing their distributions at state and or national scales.}
 \usage{
 filter_by_distribution(
   presence,
@@ -72,6 +71,5 @@ a pre-filtered dataframe will be written to the \code{out_file} path that contai
 in the 'dists_in' field.
 }
 \description{
-Filter species occurrence records by spatial layers representing their distributions at state and or national scales.
 e.g. IUCN Red List or EPBC (Environmental Protection and Biodiversity Conservation act) distributions.
 }
