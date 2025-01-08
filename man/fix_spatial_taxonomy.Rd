@@ -2,7 +2,7 @@
 % Please edit documentation in R/fix_spatial_taxonomy.R
 \name{fix_spatial_taxonomy}
 \alias{fix_spatial_taxonomy}
-\title{Fix taxonomies based spatial layers (i.e. in particular geographic areas).
+\title{Fix taxonomies based on spatial layers (i.e. in particular geographic areas).
 If >=2 range layers exist (i.e. one for each taxa), the closest will be used to update the taxonomic name.
 If only one layer exists, the taxa1 will be changed to the taxa2 according to the change_if_intersects argument.}
 \usage{
@@ -47,7 +47,7 @@ Default is c("species","subspecies").}
 Original data frame with corrected taxa names for taxa input into taxa1 and taxa2.
 }
 \description{
-Fix taxonomies based spatial layers (i.e. in particular geographic areas).
+Fix taxonomies based on spatial layers (i.e. in particular geographic areas).
 If >=2 range layers exist (i.e. one for each taxa), the closest will be used to update the taxonomic name.
 If only one layer exists, the taxa1 will be changed to the taxa2 according to the change_if_intersects argument.
 }
