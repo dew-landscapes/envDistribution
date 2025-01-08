@@ -26,6 +26,7 @@ Imports:
     dplyr,
     envSDM,
     fs,
+    magrittr,
     nngeo,
     purrr,
     rio,
