@@ -40,7 +40,7 @@ reg_cont <- function(taxa
                      , use_ConR = TRUE
                      , cell_size = 2
                      , num_rast_pos = 0
-                     , clip = use_clip
+                     , clip = NULL
 ) {
 
   sum_stats_file <- fs::path(out_dir,"summary_stats.rds")
