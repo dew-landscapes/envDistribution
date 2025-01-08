@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# `envDistribution`: an R package to help clean large unstructured data set(s)
+# `envDistribution`: an R package for working with species distributions
 
 <!-- badges: start -->
 <!-- badges: end -->

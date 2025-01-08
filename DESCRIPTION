@@ -1,5 +1,5 @@
 Package: envDistribution
-Title: What the Package Does (One Line, Title Case)
+Title: Functions for working with Species Distributions
 Version: 0.0.0.9000
 Authors@R: 
     c(
