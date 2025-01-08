@@ -45,12 +45,13 @@ fix_spatial_taxonomy <- function(bio_df,
         dists <- taxa_ds %>%
           dplyr::filter(original_name==x) %>%
           dplyr::pull(file) %>%
-          purrr::map(~ sfarrow::st_read_parquet(.x)) %>% # use map in case of multiple files returned per distribution source due to gbif taxonomy lumping (e.g. Tringa brevipes and Heteroscelus brevipes both have distributions in epbc but are now the same taxa (Tringa bevipes) - gbif is correct to combine them!)
+          purrr::map(~ sfarrow::st_read_parquet(.x) %>%
+                       sf::st_transform(crs = crs)
+                       ) %>% # use map in case of multiple files returned per distribution source
           purrr::list_rbind() %>%
           sf::st_sf() %>%
           dplyr::summarise() %>%
           sf::st_make_valid() %>%
-          sf::st_transform(crs = crs) %>%
           dplyr::mutate(near_name = x
                         , overlap = 1
                         )
