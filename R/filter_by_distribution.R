@@ -273,7 +273,7 @@ filter_by_distribution <- function(presence,
     # Write parquet ----
     if(nrow(df)>0) {
 
-      fs::dir_create(basename(out_file))
+      fs::dir_create(dirname(out_file))
 
       arrow::write_parquet(xy_dists, out_file)
 
