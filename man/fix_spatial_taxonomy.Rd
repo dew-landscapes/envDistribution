@@ -34,7 +34,7 @@ File column should reference the file path of the distribution for the associate
 \item{change_if_intersects}{Logical. If TRUE, change taxonomy if intersects with layer,
 or if FALSE, change if doesn't intersect with layer.}
 
-\item{taxa_col}{Character. Taxa column in bio_df.}
+\item{taxa_col}{Character. Taxa column in bio_df and taxa_ds (must be the same).}
 
 \item{taxonomy}{Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.}
 

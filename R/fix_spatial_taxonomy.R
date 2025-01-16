@@ -12,7 +12,7 @@
 #' File column should reference the file path of the distribution for the associated taxa in the 'taxa' column corresponding to taxa1 and taxa2.
 #' @param change_if_intersects Logical. If TRUE, change taxonomy if intersects with layer,
 #'  or if FALSE, change if doesn't intersect with layer.
-#' @param taxa_col Character. Taxa column in bio_df.
+#' @param taxa_col Character. Taxa column in bio_df and taxa_ds (must be the same).
 #' @param taxonomy Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.
 #' @param levels_to_change Character vector. At what level of the taxonomic hierarchy are the taxonomic fixes (either 'species' or 'subspecies' or both).
 #' Default is c("species","subspecies").
@@ -43,18 +43,24 @@ fix_spatial_taxonomy <- function(bio_df,
       purrr::map(function(x){
 
         dists <- taxa_ds %>%
-          dplyr::filter(original_name==x) %>%
+          dplyr::filter(!!rlang::ensym(taxa_col) == x) %>%
           dplyr::pull(file) %>%
           purrr::map(~ sfarrow::st_read_parquet(.x) %>%
-                       sf::st_transform(crs = crs)
-                       ) %>% # use map in case of multiple files returned per distribution source
+                       sf::st_transform(crs = crs) %>%
+                       dplyr::summarise() %>%
+                       sf::st_make_valid() %>%
+                       {if(attr(., "sf_column") != "geometry") dplyr::rename(., geometry = attr(., "sf_column")) %>%
+                           sf::st_set_geometry("geometry")
+                         else .
+                       }
+          ) %>% # use map in case of multiple files returned per distribution source
           purrr::list_rbind() %>%
           sf::st_sf() %>%
           dplyr::summarise() %>%
           sf::st_make_valid() %>%
           dplyr::mutate(near_name = x
                         , overlap = 1
-                        )
+          )
 
         return(dists)
 
@@ -67,8 +73,8 @@ fix_spatial_taxonomy <- function(bio_df,
       {if(nrow(lyr)>1) dplyr::filter(.,grepl(paste(c(taxa1,taxa2),collapse = "|"),!!rlang::ensym(taxa_col))) else .} %>%
       {if(nrow(lyr)==1) dplyr::filter(.,grepl(taxa1,!!rlang::ensym(taxa_col))) else .} %>%
       dplyr::select(-tidyr::any_of("returned_rank")) %>%
-      {if("subspecies" %in% levels_to_change) dplyr::left_join(.,taxonomy$subspecies$lutaxa,by=setNames("original_name",taxa_col))
-        else dplyr::left_join(.,taxonomy$species$lutaxa,by=setNames("original_name",taxa_col))
+      {if("subspecies" %in% levels_to_change) dplyr::left_join(., taxonomy$subspecies$lutaxa, by = taxa_col)
+        else dplyr::left_join(., taxonomy$species$lutaxa, by = taxa_col)
       } %>%
       dplyr::filter(returned_rank %in% levels_to_change)
 
