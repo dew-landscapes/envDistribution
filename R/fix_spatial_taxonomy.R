@@ -38,7 +38,9 @@ fix_spatial_taxonomy <- function(bio_df,
   # Find taxonomic fixes (correct names according to distribution)
   taxa_fixes <- purrr::pmap_dfr(list(taxa1,taxa2), function(taxa1,taxa2){
 
-    # Extract relevant distributions for each taxa pair (or single)
+    # Extract relevant distributions ----
+    # for each taxa pair (or single)
+
     lyr <- c(taxa1,taxa2) %>%
       purrr::map(function(x){
 
@@ -69,6 +71,8 @@ fix_spatial_taxonomy <- function(bio_df,
       purrr::list_rbind() %>%
       sf::st_sf()
 
+    # relevant taxa data ----
+
     taxa_df <- bio_df %>%
       {if(nrow(lyr)>1) dplyr::filter(.,grepl(paste(c(taxa1,taxa2),collapse = "|"),!!rlang::ensym(taxa_col))) else .} %>%
       {if(nrow(lyr)==1) dplyr::filter(.,grepl(taxa1,!!rlang::ensym(taxa_col))) else .} %>%
@@ -78,11 +82,55 @@ fix_spatial_taxonomy <- function(bio_df,
       } %>%
       dplyr::filter(returned_rank %in% levels_to_change)
 
-    taxa_overlap <- taxa_df %>%
+    # unique xy ----
+
+    xy <- taxa_df %>%
       dplyr::distinct(dplyr::pick(tidyr::all_of(c(taxa_col,coords)))) %>%
-      sf::st_as_sf(coords = coords, remove = FALSE, crs = crs) %>%
+      sf::st_as_sf(coords = coords, remove = FALSE, crs = crs)
+
+    # find records in any overlapping areas between two different distributions ----
+
+    if(nrow(lyr)>1){
+
+      lyr1 <- lyr %>%
+        dplyr::slice(1)
+
+      lyr2 <- lyr %>%
+        dplyr::slice(2)
+
+      if(any(sf::st_intersects(lyr1,lyr2, sparse = FALSE))) {
+
+        lyr_overlap <- sf::st_intersection(lyr1, lyr2) %>%
+          dplyr::summarise() %>%
+          sf::st_make_valid()
+
+        rec_in_overlap <- xy %>%
+          sf::st_join(lyr_overlap, left = FALSE) %>%
+          sf::st_set_geometry(NULL) %>%
+          dplyr::inner_join(taxa_df) %>%
+          dplyr::mutate(near_name = !!rlang::ensym(taxa_col))
+
+      } else {
+
+        rec_in_overlap <- data.frame()
+
+      }
+
+    } else {
+
+      rec_in_overlap <- data.frame()
+
+    }
+
+    # taxa record and distribution overlap (proximity) ----
+
+    taxa_overlap <- xy %>%
+      {if(nrow(rec_in_overlap)>0) dplyr::anti_join(., rec_in_overlap) else .} %>% # remove any records in areas where distributions overlap, so won't have their name changed (as cannot decide which taxa is correct in an overlapping area)
       {if(nrow(lyr)>1) sf::st_join(.,lyr, join = st_nearest_feature) else sf::st_join(.,lyr)} %>%
-      sf::st_set_geometry(NULL)
+      sf::st_set_geometry(NULL) %>%
+      {if(nrow(rec_in_overlap)>0) dplyr::bind_rows(., rec_in_overlap) else .} # re-instate any records in areas where distributions overlap to preserve original taxa names
+
+    # correct names ----
 
     if(nrow(lyr)>1){
 
@@ -125,7 +173,8 @@ fix_spatial_taxonomy <- function(bio_df,
   }
   )
 
-  # Join back to original data and update names
+  # Join back to original data and update names ----
+
   tax_fix_all <- bio_df %>%
     dplyr::left_join(taxa_fixes) %>%
     dplyr::mutate(!!rlang::ensym(taxa_col) := dplyr::if_else(!is.na(correct_name),
