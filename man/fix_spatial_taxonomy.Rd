@@ -8,8 +8,7 @@ fix_spatial_taxonomy(
   bio_df,
   coords = c("long", "lat"),
   crs = 4326,
-  taxa1,
-  taxa2,
+  taxa_df,
   taxa_ds,
   change_if_intersects = FALSE,
   taxa_col = "taxa",
@@ -24,9 +23,10 @@ fix_spatial_taxonomy(
 
 \item{crs}{Integer. Coordinate reference system that the coords correspond to (epsg code).}
 
-\item{taxa1}{Character. First taxa to change (paired with taxa 2).}
-
-\item{taxa2}{Character. Second taxa to change (paired with taxa 1).}
+\item{taxa_df}{Data frame with taxa1 and taxa2 columns indicating the names of the taxa pairs to be fixed.
+Single taxa can be input to fix only their records based on to their distribution alone
+by entering the single taxa name into the taxa1 column, and leaving taxa2 as NA.
+The taxa names need to correspond to the taxa distributions in \code{taxa_ds}.}
 
 \item{taxa_ds}{Data frame. Taxa distribution sources data frame containing 'taxa' and 'file' columns.
 File column should reference the file path of the distribution for the associated taxa in the 'taxa' column corresponding to taxa1 and taxa2.}

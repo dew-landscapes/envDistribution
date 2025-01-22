@@ -6,8 +6,10 @@
 #' @param bio_df Data frame with taxa column, and lat & long columns.
 #' @param coords Character vector. Spatial coordinate columns in order of c("x","y"), e.g. c("long", "lat").
 #' @param crs Integer. Coordinate reference system that the coords correspond to (epsg code).
-#' @param taxa1 Character. First taxa to change (paired with taxa 2).
-#' @param taxa2 Character. Second taxa to change (paired with taxa 1).
+#' @param taxa_df Data frame with taxa1 and taxa2 columns indicating the names of the taxa pairs to be fixed.
+#' Single taxa can be input to fix only their records based on to their distribution alone
+#' by entering the single taxa name into the taxa1 column, and leaving taxa2 as NA.
+#' The taxa names need to correspond to the taxa distributions in `taxa_ds`.
 #' @param taxa_ds Data frame. Taxa distribution sources data frame containing 'taxa' and 'file' columns.
 #' File column should reference the file path of the distribution for the associated taxa in the 'taxa' column corresponding to taxa1 and taxa2.
 #' @param change_if_intersects Logical. If TRUE, change taxonomy if intersects with layer,
@@ -25,8 +27,7 @@
 fix_spatial_taxonomy <- function(bio_df,
                                  coords = c("long","lat"),
                                  crs = 4326,
-                                 taxa1,
-                                 taxa2,
+                                 taxa_df,
                                  taxa_ds,
                                  change_if_intersects = FALSE,
                                  taxa_col = "taxa",
@@ -36,7 +37,7 @@ fix_spatial_taxonomy <- function(bio_df,
 {
 
   # Find taxonomic fixes (correct names according to distribution)
-  taxa_fixes <- purrr::pmap_dfr(list(taxa1,taxa2), function(taxa1,taxa2){
+  taxa_fixes <- purrr::pmap_dfr(taxa_df, function(taxa1, taxa2, ...){
 
     # Extract relevant distributions ----
     # for each taxa pair (or single)
@@ -73,18 +74,14 @@ fix_spatial_taxonomy <- function(bio_df,
 
     # relevant taxa data ----
 
-    taxa_df <- bio_df %>%
+    taxa_xy <- bio_df %>%
       {if(nrow(lyr)>1) dplyr::filter(.,grepl(paste(c(taxa1,taxa2),collapse = "|"),!!rlang::ensym(taxa_col))) else .} %>%
       {if(nrow(lyr)==1) dplyr::filter(.,grepl(taxa1,!!rlang::ensym(taxa_col))) else .} %>%
-      dplyr::select(-tidyr::any_of("returned_rank")) %>%
+      dplyr::distinct(dplyr::pick(tidyr::all_of(c(taxa_col, coords)))) %>%
       {if("subspecies" %in% levels_to_change) dplyr::left_join(., taxonomy$subspecies$lutaxa, by = taxa_col)
         else dplyr::left_join(., taxonomy$species$lutaxa, by = taxa_col)
       } %>%
-      dplyr::filter(returned_rank %in% levels_to_change)
-
-    # unique xy ----
-
-    xy <- taxa_df %>%
+      dplyr::filter(returned_rank %in% levels_to_change) %>%
       dplyr::distinct(dplyr::pick(tidyr::all_of(c(taxa_col,coords)))) %>%
       sf::st_as_sf(coords = coords, remove = FALSE, crs = crs)
 
@@ -101,14 +98,16 @@ fix_spatial_taxonomy <- function(bio_df,
       if(any(sf::st_intersects(lyr1,lyr2, sparse = FALSE))) {
 
         lyr_overlap <- sf::st_intersection(lyr1, lyr2) %>%
+          sf::st_make_valid() %>%
           dplyr::summarise() %>%
           sf::st_make_valid()
 
-        rec_in_overlap <- xy %>%
+        rec_in_overlap <- taxa_xy %>%
           sf::st_join(lyr_overlap, left = FALSE) %>%
           sf::st_set_geometry(NULL) %>%
-          dplyr::inner_join(taxa_df) %>%
-          dplyr::mutate(near_name = !!rlang::ensym(taxa_col))
+          dplyr::mutate(near_name = !!rlang::ensym(taxa_col)
+                        , overlap = 1
+                        )
 
       } else {
 
@@ -124,7 +123,7 @@ fix_spatial_taxonomy <- function(bio_df,
 
     # taxa record and distribution overlap (proximity) ----
 
-    taxa_overlap <- xy %>%
+    taxa_overlap <- taxa_xy %>%
       {if(nrow(rec_in_overlap)>0) dplyr::anti_join(., rec_in_overlap) else .} %>% # remove any records in areas where distributions overlap, so won't have their name changed (as cannot decide which taxa is correct in an overlapping area)
       {if(nrow(lyr)>1) sf::st_join(.,lyr, join = st_nearest_feature) else sf::st_join(.,lyr)} %>%
       sf::st_set_geometry(NULL) %>%
