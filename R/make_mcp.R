@@ -55,11 +55,15 @@
 
       if(!is.null(clip)) {
 
-        res <- res %>%
-          sf::st_intersection(clip %>%
-                                sf::st_transform(crs = out_crs) %>%
-                                sf::st_make_valid()
-                              )
+        if(all(sf::st_intersects(res, clip, sparse = FALSE))) {
+
+          res <- res %>%
+            sf::st_intersection(clip %>%
+                                  sf::st_transform(crs = out_crs) %>%
+                                  sf::st_make_valid()
+            )
+
+        }
 
       }
 
