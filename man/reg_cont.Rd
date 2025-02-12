@@ -33,10 +33,10 @@ mcp_noreg will be saved by \code{sfarrow::st_write_parquet()}. Currently will no
 full stop in the path. Other file types are changed to .parquet.}
 
 \item{mcp_file}{Character. Path for the national mcp. If the file exists it will be read in,
-otherwise it will be created using envSDM::make_mcp.}
+otherwise it will be created using make_mcp.}
 
 \item{grd_file}{Character. Path for the national grid. If the file exists it will be read in,
-otherwise it will be created using make_grd from envRange.}
+otherwise it will be created using make_grd.}
 
 \item{region_bound}{sf object. Region boundary polygon.}
 

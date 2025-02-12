@@ -7,9 +7,9 @@
 #' mcp_noreg will be saved by `sfarrow::st_write_parquet()`. Currently will not work very well with any
 #' full stop in the path. Other file types are changed to .parquet.
 #' @param mcp_file Character. Path for the national mcp. If the file exists it will be read in,
-#'  otherwise it will be created using envSDM::make_mcp.
+#'  otherwise it will be created using make_mcp.
 #' @param grd_file Character. Path for the national grid. If the file exists it will be read in,
-#'  otherwise it will be created using make_grd from envRange.
+#'  otherwise it will be created using make_grd.
 #' @param region_bound sf object. Region boundary polygon.
 #' @param force_new Logical. If any of the results files in the `out_dir` exists, recreate it?
 #' @param pres_x,pres_y Character. Name of the columns in `presence` that have
@@ -77,8 +77,6 @@ reg_cont <- function(taxa
 
     } else {
 
-      source(fs::path("..","envRange","function","make_grd.R"))
-
       grd <- make_grd(presence = df %>%
                         dplyr::mutate(taxa = taxa)
                       , out_file = grd_file
@@ -134,12 +132,12 @@ reg_cont <- function(taxa
     } else if(nrow(df)>=3 & (!file.exists(mcp_file)|force_new)) {
 
       mcp <- make_mcp(presence = df
-                              , out_file = mcp_file
-                              , force_new = FALSE
-                              , in_crs = in_crs
-                              , out_crs = out_crs
-                              , buf = 0
-                              , clip = clip
+                      , out_file = mcp_file
+                      , force_new = FALSE
+                      , in_crs = in_crs
+                      , out_crs = out_crs
+                      , buf = 0
+                      , clip = clip
       ) %>%
         dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6), # area in square km
                       EOO=round(EOO,2),
@@ -174,12 +172,12 @@ reg_cont <- function(taxa
       mcp_no_region <- df %>%
         sf::st_transform(crs=out_crs) %>%
         dplyr::filter(region=="noreg") %>%
-        envSDM::make_mcp(out_file = mcp_noreg_file
-                         , force_new = force_new
-                         , in_crs = in_crs
-                         , out_crs = out_crs
-                         , buf = 0
-                         , clip = clip
+        make_mcp(out_file = mcp_noreg_file
+                 , force_new = force_new
+                 , in_crs = in_crs
+                 , out_crs = out_crs
+                 , buf = 0
+                 , clip = clip
         )
 
       if(isTRUE(nrow(mcp_no_region)>0)) { # catch where make_mcp clip removes whole polygon and returns NA

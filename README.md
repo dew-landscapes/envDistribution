@@ -30,6 +30,7 @@ The following functions and data sets are provided in `envDistribution`.
 
 | object                                      | class    | description                                                                                                           |
 |:--------------------------------------------|:---------|:----------------------------------------------------------------------------------------------------------------------|
+| `envDistribution::calc_environ()`           | function | Calculate a species environment category based on occurrences.                                                        |
 | `envDistribution::dists_source()`           | function | Find file path to relevant taxa distribution (geographic range) parquet files.                                        |
 | `envDistribution::filter_by_distribution()` | function | Filter species occurrence records by spatial layers representing their distributions at state and or national scales. |
 | `envDistribution::fix_spatial_taxonomy()`   | function | Fix taxonomies based on spatial layers (i.e. in particular geographic areas).                                         |
