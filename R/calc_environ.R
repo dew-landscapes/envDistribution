@@ -53,6 +53,10 @@ calc_environ <- function(presence
       dplyr::mutate(environ = "land") |>
       sf::st_buffer(buf)
 
+    environ_lu <- tibble::tibble(environ = c("land", "ocean")
+                                 , total = 0
+                                 )
+
     res <- pres |>
       sf::st_join(land) |>
       sf::st_set_geometry(NULL) |>
@@ -60,8 +64,12 @@ calc_environ <- function(presence
                     , total = length(environ)
                     ) |>
       dplyr::count(environ, total) |>
+      dplyr::bind_rows(environ_lu) |>
+      dplyr::group_by(environ) |>
+      dplyr::summarise(n = sum(n, na.rm = TRUE)) |>
+      dplyr::ungroup() |>
       dplyr::mutate(percent = n/total*100) |>
-      tidyr::pivot_wider(names_from = environ, values_from = c(n, percent)) |>
+      tidyr::pivot_wider(names_from = environ, values_from = c(n, percent), values_fill = 0) |>
       dplyr::mutate(environ = dplyr::case_when(percent_land >= thresh ~ "terrestrial",
                                                percent_ocean >= thresh ~ "marine",
                                                percent_land < thresh & percent_ocean < thresh ~ "both",
