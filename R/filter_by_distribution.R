@@ -246,6 +246,19 @@ filter_by_distribution <- function(presence,
 
         xy_dists <- dplyr::bind_rows(xy_dists1, xy_dists2)
 
+      } else if(all(all(is.na(national)), interstate_rec, !state_rec)) {
+
+        ## Interstate data, no national distribution & no state data but a state distribution ----
+        # (e.g. Strepera versicolor plumbea)
+
+        xy_dists <- state_in_out %>%
+          dplyr::filter(state_in == 0) %>%
+          .$df %>%
+          .[[1]] %>%
+          dplyr::mutate(dist_found = 0,
+                        dist_in = NA
+          )
+
       } else {
 
         ## State and national distributions + equivalent data ----
