@@ -65,7 +65,7 @@ calc_environ <- function(presence
                     ) |>
       dplyr::count(environ, total) |>
       dplyr::bind_rows(environ_lu) |>
-      dplyr::group_by(environ) |>
+      dplyr::group_by(environ, total) |>
       dplyr::summarise(n = sum(n, na.rm = TRUE)) |>
       dplyr::ungroup() |>
       dplyr::mutate(percent = n/total*100) |>
