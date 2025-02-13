@@ -20,7 +20,7 @@
 
 calc_environ <- function(presence
                          , land_poly
-                         , thresh = 99
+                         , thresh = 95
                          , out_file
                          , force_new = FALSE
                          , pres_x = "long"
@@ -33,7 +33,7 @@ calc_environ <- function(presence
 
   run <- if(file.exists(out_file)) force_new else TRUE
 
-  out_file <- gsub(tools::file_ext(out_file), "", out_file)
+  out_file <- gsub(paste0(tools::file_ext(out_file),"$"), "", out_file)
   out_file <- gsub("\\.$", "", out_file)
   out_file <- paste0(out_file, ".rds")
 

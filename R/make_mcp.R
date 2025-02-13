@@ -34,7 +34,7 @@
 
     run <- if(file.exists(out_file)) force_new else TRUE
 
-    out_file <- gsub(tools::file_ext(out_file), "", out_file)
+    out_file <- gsub(paste0(tools::file_ext(out_file),"$"), "", out_file)
     out_file <- gsub("\\.$", "", out_file)
     out_file <- paste0(out_file, ".parquet")
 

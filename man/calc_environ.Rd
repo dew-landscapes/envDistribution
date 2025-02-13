@@ -7,7 +7,7 @@
 calc_environ(
   presence,
   land_poly,
-  thresh = 99,
+  thresh = 95,
   out_file,
   force_new = FALSE,
   pres_x = "long",
