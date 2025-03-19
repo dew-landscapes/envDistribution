@@ -60,8 +60,8 @@ calc_environ <- function(presence
                     , total = length(environ)
                     ) |>
       dplyr::count(environ, total) %>%
-      {if(!"land" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "land", total = nrow(.))) else .} %>%
-      {if(!"ocean" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "ocean", total = nrow(.))) else .} |>
+      {if(!"land" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "land", total = unique(.$total))) else .} %>%
+      {if(!"ocean" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "ocean", total = unique(.$total))) else .} |>
       dplyr::group_by(environ, total) |>
       dplyr::summarise(n = sum(n, na.rm = TRUE)) |>
       dplyr::ungroup() |>
