@@ -4,7 +4,7 @@
 #' Useful for species level analyses seeking to link to relevant trinomials (subspecies, races, varieties, forms, etc),
 #' where there may be other irrelevant trinomials occurring outside the region of interest.
 #'
-#' @param presence Cleaned and filtered dataframe of presences.
+#' @param bio_df Data frame with taxa column, and lat & long columns.
 #' @param out_dir Character. Directory path for the results files to be saved (summary_stats.rds and mcp_noreg.parquet).
 #' mcp_noreg will be saved by `sfarrow::st_write_parquet()`. Currently will not work very well with any
 #' full stop in the path. Other file types are changed to .parquet.
@@ -15,13 +15,16 @@
 #' @param in_crs epsg code for coordinates in `presence`.
 #' @param out_crs epsg code for coordinates in output grid.
 #' @param buf Distance in metres to buffer the `region_bound`.
+#' @param taxa_col Character. Taxa column in bio_df and taxa_ds (must be the same).
+#' @param taxonomy Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.
 #'
 #' @return summary_stats.rds with aoo and eoo stats,
 #' and mcp_noreg.parquet with the mcp excluding regional presences.
+#'
 #' @export
 #'
 
-reg_taxa <- function(presence
+reg_taxa <- function(bio_df
                      , out_dir
                      , region_bound
                      , force_new = FALSE
@@ -30,218 +33,160 @@ reg_taxa <- function(presence
                      , in_crs = 4326
                      , out_crs = in_crs
                      , buf = 0
+                     , taxonomy = targets::tar_read(taxonomy
+                                                    , store = fs::path("H:/dev/out/envCleaned"
+                                                                       , "sa_br_dissolve______0__P50Y__sa_br_dissolve"
+                                                                       , "90__90__P1Y__subspecies"
+                                                                       , "clean"
+                                                    ))
+                     , listed_df = arrow::read_parquet(fs::path("H:","data","taxonomy","all_status_galah.parquet"))
+                     , taxa_ds = dists_source(distrib_dir = data_dir,
+                                               sources = c("epbc","expert"),
+                                               source_rank = FALSE,
+                                               datatype = "vector"
+                     )
 ) {
 
-  reg_taxa_file <- fs::path(out_dir,"summary_stats.rds")
+  reg_taxa_file <- fs::path(out_dir, "reg_taxa.rds")
 
   run <- if(file.exists(reg_taxa_file)) force_new else TRUE
 
   if(run) {
 
-    # Base dataset ----
-    # Dataset for generating both grids (aoo) and mcps (eoo)
-    df <- presence %>%
-      dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x)) %>%
-      sf::st_as_sf(coords = c(pres_x, pres_y)
-                   , crs = in_crs
-                   , remove = FALSE
+    # All data ----
+
+    taxa_data <- bio_df %>%
+      dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x), !!rlang::ensym(taxa_col))
+
+    # Taxa bins ----
+    taxa_bins <- taxa_data %>%
+      dplyr::left_join(taxonomy$subspecies$lutaxa) %>%
+      dplyr::left_join(taxonomy$species$lutaxa %>%
+                         dplyr::rename(species=taxa) %>%
+                         dplyr::distinct(original_name,species)
       ) %>%
-      sf::st_join(region_bound %>%
-                    sf::st_transform(crs = in_crs) %>%
-                    dplyr::mutate(region="inreg")
+      dplyr::distinct() %>%
+      dplyr::filter(returned_rank <= settings$analysis_rank)
+
+    # Taxa of interest ----
+
+    aoi_taxa <-
+
+    listed_taxa <- listed_df %>%
+      dplyr::rename_with(~ gsub("rating","status",.x),contains("rating")) %>%
+      dplyr::select(-tidyr::any_of("rank"))
+
+    taxa_int <- taxa_bins %>%
+      dplyr::inner_join(aoi_taxa %>%
+                          dplyr::left_join(taxa$species$lutaxa) %>%
+                          dplyr::select(original_name
+                                        ,species=taxa
+                          )
       ) %>%
-      dplyr::mutate(region=ifelse(!is.na(region),"inreg","noreg")) %>% # for generating in and out of region stats
-      sf::st_make_valid()
+      dplyr::inner_join(listed_taxa) %>%
+      dplyr::distinct(species,taxa,original_name,long,lat)
 
-    # output dir ----
-    fs::dir_create(out_dir)
-
-    # AOO ----
-
-    ## load/create national grid ----
-    if(file.exists(grd_file) & !force_new) {
-
-      grd <- sfarrow::st_read_parquet(grd_file) %>%
-        sf::st_transform(crs=out_crs)
-
-    } else {
-
-      grd <- make_grd(presence = df %>%
-                        dplyr::mutate(taxa = taxa)
-                      , out_file = grd_file
-                      , force_new = FALSE
-                      , in_crs = in_crs
-                      , out_crs = out_crs
-                      , use_ConR = use_ConR
-                      , cell_size = cell_size
-                      , num_rast_pos = num_rast_pos
+    # Distance of closest record to study area ----
+    taxa_rec_dist <- taxa_fbd %>%
+      tidyr::nest(.by = c(species,taxa,original_name), data = c(long,lat)) %>%
+      dplyr::mutate(dist=furrr::future_map_dbl(data, ~ nngeo::st_nn(settings$aoi
+                                                                    , .x %>%
+                                                                      sf::st_as_sf(coords=c("long","lat"),crs=settings$latlon_epsg) %>%
+                                                                      sf::st_transform(crs = sf::st_crs(settings$aoi))
+                                                                    , k = 1
+                                                                    , maxdist = Inf
+                                                                    , returnDist = TRUE
+                                                                    , progress = FALSE
+                                                                    , parallel = 1
+      ) %>%
+        .$dist %>%
+        unlist()
+      , .options = furrr::furrr_options(globals = "settings"
+                                        , seed = TRUE
       )
-
-    }
-
-
-    ## aoo summary stats ----
-    aoo <- grd %>%
-      sf::st_transform(crs = out_crs) %>%
-      dplyr::mutate(cell=dplyr::row_number()) %>%
-      sf::st_join(region_bound %>%
-                    sf::st_transform(crs = out_crs) %>%
-                    dplyr::mutate(region="inreg")
-      ) %>%
-      dplyr::mutate(region=ifelse(!is.na(region),"inreg","noreg")) %>% # for generating in and out of region stats
-      sf::st_set_geometry(NULL) %>%
-      dplyr::group_by(region) %>%
-      dplyr::summarise(cells=dplyr::n_distinct(cell),
-                       AOO=cells*(cell_size^2) # instead of rounding error produced by st_area
-      ) %>%
-      dplyr::ungroup() %>%
-      dplyr::select(-cells) %>%
-      tidyr::pivot_wider(names_from = "region",names_prefix = "AOO_",values_from = "AOO") %>%
-      {if(!"AOO_noreg" %in% names(.)) dplyr::mutate(.,AOO_noreg=0) else .} %>%
-      {if(!"AOO_inreg" %in% names(.)) dplyr::mutate(.,AOO_inreg=0) else .} %>%
-      dplyr::mutate(AOO_tot=AOO_inreg+AOO_noreg,
-                    AOO_regpc=AOO_inreg/AOO_tot*100
-      ) %>%
-      dplyr::relocate(AOO_tot,AOO_noreg,AOO_inreg,AOO_regpc)
-
-
-    # EOO ----
-
-    ## load/create national mcp ----
-    if(file.exists(mcp_file) & !force_new) {
-
-      mcp <- sfarrow::st_read_parquet(mcp_file) %>%
-        sf::st_transform(crs=out_crs) %>%
-        dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6), # area in square km
-                      EOO=round(EOO,2),
-                      type="tot",
-                      EOO_label=paste0(as.character(EOO)," km","\U00B2")
-        )
-
-    } else if(nrow(df)>=3 & (!file.exists(mcp_file)|force_new)) {
-
-      mcp <- make_mcp(presence = df
-                      , out_file = mcp_file
-                      , force_new = FALSE
-                      , in_crs = in_crs
-                      , out_crs = out_crs
-                      , buf = 0
-                      , clip = clip
-      ) %>%
-        dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6), # area in square km
-                      EOO=round(EOO,2),
-                      type="tot",
-                      EOO_label=paste0(as.character(EOO)," km","\U00B2")
-        )
-
-    } else {
-
-      mcp <- tibble::tibble(EOO=NA,
-                            type="tot",
-                            EOO_label=NA
       )
-
-    }
-
-    ## national mcp without region ----
-
-    mcp_noreg_file <- fs::path(out_dir,"mcp_noreg.parquet")
-
-    if(file.exists(mcp_noreg_file) & !force_new) {
-
-      mcp_no_region <- sfarrow::st_read_parquet(mcp_noreg_file) %>%
-        sf::st_transform(crs=out_crs) %>%
-        dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6),
-                      EOO=round(EOO,2),
-                      type="noreg"
-        )
-
-    } else if(nrow(dplyr::filter(df,region=="noreg"))>=3) {
-
-      mcp_no_region <- df %>%
-        sf::st_transform(crs=out_crs) %>%
-        dplyr::filter(region=="noreg") %>%
-        make_mcp(out_file = mcp_noreg_file
-                 , force_new = force_new
-                 , in_crs = in_crs
-                 , out_crs = out_crs
-                 , buf = 0
-                 , clip = clip
-        )
-
-      if(isTRUE(nrow(mcp_no_region)>0)) { # catch where make_mcp clip removes whole polygon and returns NA
-
-        mcp_no_region <- mcp_no_region %>%
-          dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6),
-                        EOO=round(EOO,2),
-                        type="noreg"
-          )
-
-      } else {
-
-        mcp_no_region <- tibble::tibble(EOO=NA,
-                                        type="noreg"
-        )
-
-      }
-
-
-    } else {
-
-      mcp_no_region <- tibble::tibble(EOO=NA,
-                                      type="noreg"
-      )
-
-    }
-
-    ## eoo summary stats ----
-    eoo <- mcp %>%
-      dplyr::select(-EOO_label) %>%
-      dplyr::bind_rows(mcp_no_region) %>%
-      {if("geometry" %in% names(.)) sf::st_set_geometry(.,NULL) else .} %>%
-      tidyr::pivot_wider(names_from = "type",names_prefix = "EOO_",values_from = "EOO") %>%
-      dplyr::mutate(EOO_inreg=EOO_tot-EOO_noreg, # region contribution to national EOO
-                    EOO_regpc=EOO_inreg/EOO_tot*100
-      )
-
-    # Distance to nearest extra-regional population ----
-    if(nearest_pop) {
-
-      if(nrow(dplyr::filter(df,region=="noreg"))>0 & nrow(dplyr::filter(df,region=="inreg"))>0) {
-
-        near_pop <- df %>%
-          dplyr::filter(region=="inreg") %>%
-          dplyr::summarise() %>%
-          sf::st_make_valid() %>%
-          nngeo::st_nn(df %>% dplyr::filter(region=="noreg"),
-                       sparse = TRUE,
-                       k = 1,
-                       maxdist = Inf,
-                       returnDist = TRUE,
-                       progress = FALSE,
-                       parallel = 1
-          ) %>%
-          .$dist %>%
-          unlist()
-
-      } else {
-
-        near_pop=NA
-
-      }
-
-    }
-
-    # Summary stats ----
-    ss <- aoo %>%
-      dplyr::bind_cols(eoo) %>%
-      dplyr::mutate(reg_rec=nrow(dplyr::filter(df,region=="inreg"))
-                    , taxa = taxa
       ) %>%
-      {if(nearest_pop) dplyr::mutate(.,dist_near_pop=near_pop/1000) else .} %>% # convert distance in metres from st_nn to km
-      dplyr::relocate(taxa)
+      dplyr::distinct(species,taxa,original_name,dist)
 
-    saveRDS(ss, reg_taxa_file)
+   # Distance of distribution to study area ----
+
+    # Available distribution details for all taxa
+    taxa_ds <- taxa_ds %>%
+      dplyr::left_join(taxa$subspecies$lutaxa) %>%
+      dplyr::filter(returned_rank <= settings$analysis_rank) %>%
+      dplyr::distinct(taxa,ds,file)
+
+    # Find distance to relevant distribution per taxa
+    taxa_distrib_dist <- taxa_fbd %>%
+      dplyr::distinct(species, taxa, original_name) %>%
+      dplyr::inner_join(taxa_ds) %>%
+      dplyr::mutate(dist = furrr::future_map_dbl(file
+                                                 , \(x) nngeo::st_nn(settings$aoi
+                                                                     , x %>%
+                                                                       arrow::open_dataset() %>%
+                                                                       sfarrow::read_sf_dataset() %>%
+                                                                       sf::st_transform(crs = sf::st_crs(settings$aoi)) %>%
+                                                                       sf::st_make_valid() %>%
+                                                                       dplyr::summarise() %>%
+                                                                       sf::st_make_valid()
+                                                                     , k = 1
+                                                                     , maxdist = Inf
+                                                                     , returnDist = TRUE
+                                                                     , progress = FALSE
+                                                                     , parallel = 1
+                                                 ) %>%
+                                                   .$dist %>%
+                                                   unlist()
+                                                 , .options = furrr::furrr_options(globals = "settings"
+                                                                                   , seed = TRUE
+                                                 )
+      )
+      ) %>%
+      dplyr::distinct(species,taxa,original_name,dist)
+
+
+    listed_timer <- timer("distance to distribution"
+                          , time_df = listed_timer
+    )
+
+    # Relevant listed taxa to aoi ----
+    # Relevant taxa data to aoi (for use in multiple locations below)
+    taxa_rel <- taxa_rec_dist %>%
+      dplyr::bind_rows(taxa_distrib_dist) %>%
+      dplyr::filter(dist <= settings$use_buffer) %>%
+      dplyr::distinct(species,taxa,original_name)
+
+    listed_timer <- timer("aoi relevant listed taxa"
+                          , notes = paste0(length(unique(taxa_rel$taxa)), " aoi listed original names")
+                          , time_df = listed_timer
+    )
+
+    # Add listed binomials ----
+    # i.e. taxa listed at species level
+    # To keep listed binomials with MCP overlap in aoi_taxa
+    # Really need to calculate MCPs at ssp level to avoid this
+    # If so, aoi_listed would be performing all the same functions of aoi_taxa at spp & ssp levels
+    bi_listed <- aoi_taxa %>%
+      dplyr::inner_join(listed_taxa) %>%
+      dplyr::filter(rated_rank=="sp") %>%
+      dplyr::select(tidyr::any_of(contains(c("taxa","original_name","status","listed"))))
+
+    listed_timer <- timer("bi_listed"
+                          , notes = paste0(length(unique(bi_listed$taxa)), " aoi listed binomials")
+                          , time_df = listed_timer
+    )
+
+    # All relevant listed taxa with listing details ----
+    aoi_listed <- taxa_rel %>%
+      dplyr::left_join(listed_taxa) %>%
+      dplyr::select(-c(taxa,rated_rank)) %>%
+      dplyr::rename(taxa=species) %>%
+      dplyr::bind_rows(bi_listed) %>%
+      dplyr::arrange(taxa) %>%
+      dplyr::distinct() %>%
+      dplyr::filter(!taxa %in% settings$delete_taxa$aoi_listed) # temporary fix for error in future listed database
+
+    saveRDS(aoi_listed, reg_taxa_file)
 
   } else {
 
