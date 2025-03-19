@@ -56,7 +56,7 @@ where there may be other irrelevant trinomials occurring outside the region of i
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">reg_taxa</span><span class="op">(</span></span>
-<span>  <span class="va">presence</span>,</span>
+<span>  <span class="va">bio_df</span>,</span>
 <span>  <span class="va">out_dir</span>,</span>
 <span>  <span class="va">region_bound</span>,</span>
 <span>  force_new <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -64,14 +64,20 @@ where there may be other irrelevant trinomials occurring outside the region of i
 <span>  pres_y <span class="op">=</span> <span class="st">"lat"</span>,</span>
 <span>  in_crs <span class="op">=</span> <span class="fl">4326</span>,</span>
 <span>  out_crs <span class="op">=</span> <span class="va">in_crs</span>,</span>
-<span>  buf <span class="op">=</span> <span class="fl">0</span></span>
+<span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  taxonomy <span class="op">=</span> <span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_read.html" class="external-link">tar_read</a></span><span class="op">(</span><span class="va">taxonomy</span>, store <span class="op">=</span> <span class="fu">fs</span><span class="fu">::</span><span class="fu"><a href="https://fs.r-lib.org/reference/path.html" class="external-link">path</a></span><span class="op">(</span><span class="st">"H:/dev/out/envCleaned"</span>,</span>
+<span>    <span class="st">"sa_br_dissolve______0__P50Y__sa_br_dissolve"</span>, <span class="st">"90__90__P1Y__subspecies"</span>, <span class="st">"clean"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  listed_df <span class="op">=</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/read_parquet.html" class="external-link">read_parquet</a></span><span class="op">(</span><span class="fu">fs</span><span class="fu">::</span><span class="fu"><a href="https://fs.r-lib.org/reference/path.html" class="external-link">path</a></span><span class="op">(</span><span class="st">"H:"</span>, <span class="st">"data"</span>, <span class="st">"taxonomy"</span>,</span>
+<span>    <span class="st">"all_status_galah.parquet"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  taxa_ds <span class="op">=</span> <span class="fu"><a href="dists_source.html">dists_source</a></span><span class="op">(</span>distrib_dir <span class="op">=</span> <span class="va">data_dir</span>, sources <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"epbc"</span>, <span class="st">"expert"</span><span class="op">)</span>,</span>
+<span>    source_rank <span class="op">=</span> <span class="cn">FALSE</span>, datatype <span class="op">=</span> <span class="st">"vector"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>presence</dt>
-<dd><p>Cleaned and filtered dataframe of presences.</p></dd>
+    <dl><dt>bio_df</dt>
+<dd><p>Data frame with taxa column, and lat &amp; long columns.</p></dd>
 
 
 <dt>out_dir</dt>
@@ -103,6 +109,14 @@ the x and y coordinates.</p></dd>
 
 <dt>buf</dt>
 <dd><p>Distance in metres to buffer the <code>region_bound</code>.</p></dd>
+
+
+<dt>taxonomy</dt>
+<dd><p>Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.</p></dd>
+
+
+<dt>taxa_col</dt>
+<dd><p>Character. Taxa column in bio_df and taxa_ds (must be the same).</p></dd>
 
 </dl></div>
     <div id="value">

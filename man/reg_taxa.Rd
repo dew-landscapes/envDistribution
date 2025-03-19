@@ -5,7 +5,7 @@
 \title{Return relevant taxa to a region of interest based on occurrences and or distributions.}
 \usage{
 reg_taxa(
-  presence,
+  bio_df,
   out_dir,
   region_bound,
   force_new = FALSE,
@@ -13,11 +13,17 @@ reg_taxa(
   pres_y = "lat",
   in_crs = 4326,
   out_crs = in_crs,
-  buf = 0
+  buf = 0,
+  taxonomy = targets::tar_read(taxonomy, store = fs::path("H:/dev/out/envCleaned",
+    "sa_br_dissolve______0__P50Y__sa_br_dissolve", "90__90__P1Y__subspecies", "clean")),
+  listed_df = arrow::read_parquet(fs::path("H:", "data", "taxonomy",
+    "all_status_galah.parquet")),
+  taxa_ds = dists_source(distrib_dir = data_dir, sources = c("epbc", "expert"),
+    source_rank = FALSE, datatype = "vector")
 )
 }
 \arguments{
-\item{presence}{Cleaned and filtered dataframe of presences.}
+\item{bio_df}{Data frame with taxa column, and lat & long columns.}
 
 \item{out_dir}{Character. Directory path for the results files to be saved (summary_stats.rds and mcp_noreg.parquet).
 mcp_noreg will be saved by \code{sfarrow::st_write_parquet()}. Currently will not work very well with any
@@ -35,6 +41,10 @@ the x and y coordinates.}
 \item{out_crs}{epsg code for coordinates in output grid.}
 
 \item{buf}{Distance in metres to buffer the \code{region_bound}.}
+
+\item{taxonomy}{Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.}
+
+\item{taxa_col}{Character. Taxa column in bio_df and taxa_ds (must be the same).}
 }
 \value{
 summary_stats.rds with aoo and eoo stats,
