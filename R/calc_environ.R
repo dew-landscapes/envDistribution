@@ -53,18 +53,15 @@ calc_environ <- function(presence
       dplyr::mutate(environ = "land") |>
       sf::st_buffer(buf)
 
-    environ_lu <- tibble::tibble(environ = c("land", "ocean")
-                                 , total = 0
-                                 )
-
     res <- pres |>
       sf::st_join(land) |>
       sf::st_set_geometry(NULL) |>
       dplyr::mutate(environ = ifelse(is.na(environ), "ocean", environ)
                     , total = length(environ)
                     ) |>
-      dplyr::count(environ, total) |>
-      dplyr::bind_rows(environ_lu) |>
+      dplyr::count(environ, total) %>%
+      {if(!"land" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "land", total = nrow(.))) else .} %>%
+      {if(!"ocean" %in% .$environ) dplyr::bind_rows(., tibble::tibble(environ = "ocean", total = nrow(.))) else .} |>
       dplyr::group_by(environ, total) |>
       dplyr::summarise(n = sum(n, na.rm = TRUE)) |>
       dplyr::ungroup() |>
