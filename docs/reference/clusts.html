@@ -55,25 +55,31 @@ for species with geographically separated populations/subspecies.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">clusts</span><span class="op">(</span><span class="va">presence</span>, <span class="va">h</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">clusts</span><span class="op">(</span><span class="va">presence</span>, <span class="va">h</span>, pres_x <span class="op">=</span> <span class="st">"long"</span>, pres_y <span class="op">=</span> <span class="st">"lat"</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>presence</dt>
-<dd><p>Cleaned and filtered dataframe of presences</p></dd>
+<dd><p>Cleaned and filtered data frame of presences.</p></dd>
 
 
 <dt>h</dt>
 <dd><p>Distance used to cluster points, i.e. points within individual clusters
 will not be further apart than this distance.</p></dd>
 
+
+<dt>pres_x, pres_y</dt>
+<dd><p>Character. Name of the columns in <code>presence</code> that have
+the x and y coordinates.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
     
 
-<p>data frame saved as rds to <code>out_file</code> path containing environ and land_pc (percent land overlap ) fields for the taxa.</p>
+<p>Vector of cluster ID numbers for each row in <code>presence</code>,
+indicating which cluster each row belongs.</p>
     </div>
 
   </div>
