@@ -2,6 +2,7 @@
 
 export("%>%")
 export(calc_environ)
+export(clusts)
 export(dists_source)
 export(filter_by_distribution)
 export(fix_spatial_taxonomy)
