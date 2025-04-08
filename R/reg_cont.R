@@ -154,10 +154,13 @@ reg_cont <- function(taxa
     } else if(nrow(dplyr::filter(df,region=="noreg"))>=3) {
 
       mcp_no_region <- df %>%
-        sf::st_transform(crs=out_crs) %>%
         dplyr::filter(region=="noreg") %>%
+        dplyr::select(-region) %>%
+        sf::st_set_geometry(NULL) %>%
         make_mcp(out_file = mcp_noreg_file
                  , force_new = force_new
+                 , pres_x = pres_x
+                 , pres_y = pres_y
                  , in_crs = in_crs
                  , out_crs = out_crs
                  , buf = 0
