@@ -95,7 +95,7 @@ reg_cont <- function(taxa
       sf::st_set_geometry(NULL) %>%
       dplyr::group_by(region) %>%
       dplyr::summarise(cells=dplyr::n_distinct(cell),
-                       AOO=cells*(cell_size^2) # instead of rounding error produced by st_area
+                       AOO=cells*(unique(cell_size)^2) # instead of rounding error produced by st_area
       ) %>%
       dplyr::ungroup() %>%
       dplyr::select(-cells) %>%
