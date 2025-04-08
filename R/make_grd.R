@@ -65,10 +65,12 @@ make_grd <- function(presence
         else sf::st_as_sf(.,coords = c(pres_x, pres_y)
                        , crs = in_crs
           ) %>%
-          sf::st_make_grid()
+          sf::st_make_grid(cellsize = units::as_units(cell_size, "km^2"))
       } %>%
       sf::st_transform(crs = out_crs) %>%
       dplyr::select(tidyr::any_of(contains(c("geometry","shape"))))
+
+    attr(res, 'cellsize_km') <- cell_size # for use in reg_cont
 
     sfarrow::st_write_parquet(res, out_file)
 
