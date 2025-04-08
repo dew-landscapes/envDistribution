@@ -37,5 +37,5 @@ The following functions and data sets are provided in `envDistribution`.
 | `envDistribution::fix_spatial_taxonomy()`   | function | Fix taxonomies based on spatial layers (i.e. in particular geographic areas).                                         |
 | `envDistribution::make_grd()`               | function | Make grid around occurrence records                                                                                   |
 | `envDistribution::make_mcp()`               | function | Make minimum convex polygon (MCP) around occurrence records                                                           |
-| `envDistribution::reg_cont()`               | function | Regional contribution to national range (AOO and EOO)                                                                 |
+| `envDistribution::reg_cont()`               | function | Regional contribution to range (AOO and EOO)                                                                          |
 | `envDistribution::reg_taxa()`               | function | Return relevant taxa to a region of interest based on occurrences and or distributions.                               |

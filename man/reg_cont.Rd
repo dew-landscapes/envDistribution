@@ -2,7 +2,7 @@
 % Please edit documentation in R/reg_cont.R
 \name{reg_cont}
 \alias{reg_cont}
-\title{Regional contribution to national range (AOO and EOO)}
+\title{Regional contribution to range (AOO and EOO)}
 \usage{
 reg_cont(
   taxa,
@@ -17,9 +17,6 @@ reg_cont(
   in_crs = 4326,
   out_crs = in_crs,
   nearest_pop = FALSE,
-  use_ConR = TRUE,
-  cell_size = 2,
-  num_rast_pos = 0,
   clip = NULL
 )
 }
@@ -32,11 +29,9 @@ reg_cont(
 mcp_noreg will be saved by \code{sfarrow::st_write_parquet()}. Currently will not work very well with any
 full stop in the path. Other file types are changed to .parquet.}
 
-\item{mcp_file}{Character. Path for the national mcp. If the file exists it will be read in,
-otherwise it will be created using make_mcp.}
+\item{mcp_file}{Character. Path for the range mcp.}
 
-\item{grd_file}{Character. Path for the national grid. If the file exists it will be read in,
-otherwise it will be created using make_grd.}
+\item{grd_file}{Character. Path for the range grid.}
 
 \item{region_bound}{sf object. Region boundary polygon.}
 
@@ -47,18 +42,17 @@ the x and y coordinates.}
 
 \item{in_crs}{epsg code for coordinates in \code{presence}.}
 
-\item{out_crs}{epsg code for coordinates in output grid.}
+\item{out_crs}{epsg code for coordinates in output 'no region' mcp.}
 
 \item{nearest_pop}{Logical. Calculate distance to nearest extra-regional population?}
 
-\item{use_ConR, cell_size, num_rast_pos}{Passed to make_grd if national grid doesn't exist or force_new = TRUE.}
-
-\item{clip}{Passed to make_mcp if national mcp doesn't exist or force_new = TRUE.}
+\item{clip}{sf to clip the 'no region' mcp for comparing the impact of removing regional presences.}
 }
 \value{
 summary_stats.rds with aoo and eoo stats,
 and mcp_noreg.parquet with the mcp excluding regional presences.
 }
 \description{
-Regional contribution to national range (AOO and EOO)
+Typically used to determine the contribution of a region to the national range of a species,
+where a 'region' is a smaller area within the range.
 }
