@@ -46,8 +46,9 @@ reg_cont <- function(taxa
 
   if(run) {
 
-    # Base dataset ----
-    # Dataset for generating both grids (aoo) and mcps (eoo)
+    # Presences ----
+    # Presence dataset for restricting AOO grid to cells that have points in region
+    # & generating no region mcp for calculating impact of losing presences in region on EOO
     df <- presence %>%
       dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x)) %>%
       sf::st_as_sf(coords = c(pres_x, pres_y)
@@ -85,14 +86,19 @@ reg_cont <- function(taxa
 
     ## aoo summary stats ----
     aoo <- grd %>%
+      dplyr::mutate(cell=dplyr::row_number()) |>
       sf::st_transform(crs = out_crs) %>%
-      dplyr::mutate(cell=dplyr::row_number()) %>%
-      sf::st_join(region_bound %>%
-                    sf::st_transform(crs = out_crs) %>%
-                    dplyr::mutate(region="inreg")
-      ) %>%
-      dplyr::mutate(region=ifelse(!is.na(region),"inreg","noreg")) %>% # for generating in and out of region stats
+      sf::st_join(df |> # use region in/out from presence points rather than just overlapping grid with region to avoid having cells that overlap but don't have any presences in the region
+                    dplyr::select(region) |>
+                    sf::st_transform(crs = out_crs)
+                  )  %>%
       sf::st_set_geometry(NULL) %>%
+      dplyr::mutate(region = factor(region, levels = c("inreg", "noreg"), ordered = TRUE)) |>
+      dplyr::group_by(cell) %>%
+      dplyr::summarise(region = min(region)
+                       , cell_size = unique(cell_size)
+                       ) %>%
+      dplyr::ungroup() |>
       dplyr::group_by(region) %>%
       dplyr::summarise(cells=dplyr::n_distinct(cell),
                        AOO=cells*(unique(cell_size)^2) # instead of rounding error produced by st_area
@@ -234,7 +240,7 @@ reg_cont <- function(taxa
     # Summary stats ----
     ss <- aoo %>%
       dplyr::bind_cols(eoo) %>%
-      dplyr::mutate(reg_rec=nrow(dplyr::filter(df,region=="inreg"))
+      dplyr::mutate(reg_rec = nrow(dplyr::filter(df,region=="inreg"))
                     , taxa = taxa
                     ) %>%
       {if(nearest_pop) dplyr::mutate(.,dist_near_pop=near_pop/1000) else .} %>% # convert distance in metres from st_nn to km
