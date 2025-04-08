@@ -1,24 +1,24 @@
 
-#' Regional contribution to national range (AOO and EOO)
+#' Regional contribution to range (AOO and EOO)
+#'
+#' Typically used to determine the contribution of a region to the national range of a species,
+#' where a 'region' is a smaller area within the range.
 #'
 #' @param taxa Character. Taxa name for use in ConR and outputs.
 #' @param presence Cleaned and filtered dataframe of presences.
 #' @param out_dir Character. Directory path for the results files to be saved (summary_stats.rds and mcp_noreg.parquet).
 #' mcp_noreg will be saved by `sfarrow::st_write_parquet()`. Currently will not work very well with any
 #' full stop in the path. Other file types are changed to .parquet.
-#' @param mcp_file Character. Path for the national mcp. If the file exists it will be read in,
-#'  otherwise it will be created using make_mcp.
-#' @param grd_file Character. Path for the national grid. If the file exists it will be read in,
-#'  otherwise it will be created using make_grd.
+#' @param mcp_file Character. Path for the range mcp.
+#' @param grd_file Character. Path for the range grid.
 #' @param region_bound sf object. Region boundary polygon.
 #' @param force_new Logical. If any of the results files in the `out_dir` exists, recreate it?
 #' @param pres_x,pres_y Character. Name of the columns in `presence` that have
 #' the x and y coordinates.
 #' @param in_crs epsg code for coordinates in `presence`.
-#' @param out_crs epsg code for coordinates in output grid.
+#' @param out_crs epsg code for coordinates in output 'no region' mcp.
 #' @param nearest_pop Logical. Calculate distance to nearest extra-regional population?
-#' @param use_ConR,cell_size,num_rast_pos Passed to make_grd if national grid doesn't exist or force_new = TRUE.
-#' @param clip Passed to make_mcp if national mcp doesn't exist or force_new = TRUE.
+#' @param clip sf to clip the 'no region' mcp for comparing the impact of removing regional presences.
 #'
 #' @return summary_stats.rds with aoo and eoo stats,
 #' and mcp_noreg.parquet with the mcp excluding regional presences.
@@ -37,9 +37,6 @@ reg_cont <- function(taxa
                      , in_crs = 4326
                      , out_crs = in_crs
                      , nearest_pop = FALSE
-                     , use_ConR = TRUE
-                     , cell_size = 2
-                     , num_rast_pos = 0
                      , clip = NULL
 ) {
 
@@ -69,24 +66,19 @@ reg_cont <- function(taxa
 
     # AOO ----
 
-    ## load/create national grid ----
-    if(file.exists(grd_file) & !force_new) {
+    ## load range grid ----
+    if(is.null(grd_file)) {
 
-      grd <- sfarrow::st_read_parquet(grd_file) %>%
-        sf::st_transform(crs=out_crs)
+      stop("grd_file is NULL. Generate a grid and supply the file path as the grd_file.")
+
+    } else if(!file.exists(grd_file)) {
+
+      stop("AOO grid does not exist. Generate a grid and supply the file path as the grd_file.")
 
     } else {
 
-      grd <- make_grd(presence = df %>%
-                        dplyr::mutate(taxa = taxa)
-                      , out_file = grd_file
-                      , force_new = FALSE
-                      , in_crs = in_crs
-                      , out_crs = out_crs
-                      , use_ConR = use_ConR
-                      , cell_size = cell_size
-                      , num_rast_pos = num_rast_pos
-      )
+      grd <- sfarrow::st_read_parquet(grd_file) %>%
+        sf::st_transform(crs=out_crs)
 
     }
 
@@ -118,8 +110,23 @@ reg_cont <- function(taxa
 
     # EOO ----
 
-    ## load/create national mcp ----
-    if(file.exists(mcp_file) & !force_new) {
+    ## load range mcp ----
+    if(is.null(mcp_file) & nrow(df)>=3) {
+
+      stop("mcp_file is NULL. Generate a MCP and supply the file path as the mcp_file.")
+
+    } else if(nrow(df)<3) {
+
+      mcp <- tibble::tibble(EOO=NA,
+                            type="tot",
+                            EOO_label=NA
+      )
+
+    } else if(nrow(df)>=3 & !file.exists(mcp_file)) {
+
+      stop("EOO MCP does not exist. Generate a MCP and supply the file path as the mcp_file.")
+
+    } else {
 
       mcp <- sfarrow::st_read_parquet(mcp_file) %>%
         sf::st_transform(crs=out_crs) %>%
@@ -129,32 +136,9 @@ reg_cont <- function(taxa
                       EOO_label=paste0(as.character(EOO)," km","\U00B2")
         )
 
-    } else if(nrow(df)>=3 & (!file.exists(mcp_file)|force_new)) {
-
-      mcp <- make_mcp(presence = df
-                      , out_file = mcp_file
-                      , force_new = FALSE
-                      , in_crs = in_crs
-                      , out_crs = out_crs
-                      , buf = 0
-                      , clip = clip
-      ) %>%
-        dplyr::mutate(EOO=as.numeric(sf::st_area(.)/1e+6), # area in square km
-                      EOO=round(EOO,2),
-                      type="tot",
-                      EOO_label=paste0(as.character(EOO)," km","\U00B2")
-        )
-
-    } else {
-
-      mcp <- tibble::tibble(EOO=NA,
-                            type="tot",
-                            EOO_label=NA
-      )
-
     }
 
-    ## national mcp without region ----
+    ## range mcp without region ----
 
     mcp_noreg_file <- fs::path(out_dir,"mcp_noreg.parquet")
 
@@ -211,7 +195,7 @@ reg_cont <- function(taxa
       dplyr::bind_rows(mcp_no_region) %>%
       {if("geometry" %in% names(.)) sf::st_set_geometry(.,NULL) else .} %>%
       tidyr::pivot_wider(names_from = "type",names_prefix = "EOO_",values_from = "EOO") %>%
-      dplyr::mutate(EOO_inreg=EOO_tot-EOO_noreg, # region contribution to national EOO
+      dplyr::mutate(EOO_inreg=EOO_tot-EOO_noreg, # region contribution to range EOO
                     EOO_regpc=EOO_inreg/EOO_tot*100
       )
 
