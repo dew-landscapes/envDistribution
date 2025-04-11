@@ -47,33 +47,25 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
   # Find all sources for all original_name ----
   taxa_ds <- sources %>%
     purrr::set_names() %>%
-    purrr::imap( \(x,idx)
+    purrr::map( \(x)
 
                  if(datatype=="vector"){
 
-                   ds_path <- fs::path(distrib_dir,datatype,"distribution") %>%
-                     fs::dir_ls(type = "directory", regexp=paste0(x,"_dists"))
+                   ds_path <- fs::path(distrib_dir, datatype, "distribution") %>%
+                     fs::dir_info(type = "directory", regexp = x) |>
+                     dplyr::filter(basename(path) == x) |> # remove any old variants or mismatches
+                     dplyr::pull(path)
 
                    if(any(fs::dir_exists(ds_path))){ # ensures no erroneous entries where source dir/files do not exist (e.g. for sources other than epbc and expert in raster)
 
                      ds <- ds_path %>%
-                       fs::dir_ls(type = "file", regexp="\\.parquet$", recurse = TRUE) %>%
+                       fs::dir_ls(type = "file", regexp = "\\.parquet$", recurse = TRUE) %>%
                        tibble::as_tibble() %>%
                        dplyr::rename(file = value) %>%
-                       {if(!x %in% c("epbc","other")) dplyr::mutate(.,
-                                                                    original_name = gsub("^.*/taxa=(.*)/part-.*", "\\1", file),
-                                                                    original_name = gsub("%|[0-9]", " ", original_name)
-                       ) else .} %>%
-                       {if(x=="epbc") dplyr::mutate(.,
-                                                    original_name = gsub(paste0("^.*",x,"_dists/(.*)\\.parquet/part-.*"), "\\1", file),
-                                                    original_name = gsub("_", " ", original_name)
-                       ) else .} %>%
-                       {if(x=="other") dplyr::mutate(.,
-                                                     original_name = gsub(paste0("^.*",x,"_dists/(.*)\\.parquet"), "\\1", file),
-                                                     original_name = gsub("_", " ", original_name)
-                       ) else .} %>%
-                       dplyr::mutate(ds = idx,
-                                     original_name = stringr::str_squish(original_name)
+                       dplyr::mutate(original_name = gsub(paste0("^.*", x, "/(.*)/part-.*"), "\\1", file)
+                                     , original_name = gsub("_", " ", original_name)
+                                     , original_name = stringr::str_squish(original_name)
+                                     , ds = x
                        ) %>%
                        dplyr::relocate(original_name, ds, file)
 
@@ -93,9 +85,9 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
                        fs::dir_ls(type = "file", regexp="\\.tif$", recurse = TRUE) %>%
                        tibble::as_tibble() %>%
                        dplyr::rename(file = value) %>%
-                       dplyr::mutate(original_name = gsub(paste0("^.*/",idx,"/(.*)\\.tif"), "\\1", file),
+                       dplyr::mutate(original_name = gsub(paste0("^.*/",x,"/(.*)\\.tif"), "\\1", file),
                                      original_name = stringr::str_squish(original_name),
-                                     ds = idx
+                                     ds = x
                        ) %>%
                        dplyr::relocate(original_name, ds, file)
 
@@ -129,13 +121,13 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
 
     if(!is.null(taxonomy)){
 
-    taxa_ds <- taxa_ds %>%
-      {if("subspecies" %in% target_ranks) dplyr::left_join(.,taxonomy$subspecies$lutaxa, by="original_name")
-        else dplyr::left_join(.,taxonomy$species$lutaxa, by="original_name")
+      taxa_ds <- taxa_ds %>%
+        {if("subspecies" %in% target_ranks) dplyr::left_join(.,taxonomy$subspecies$lutaxa, by="original_name")
+          else dplyr::left_join(.,taxonomy$species$lutaxa, by="original_name")
         } %>%
-      dplyr::filter(returned_rank %in% target_ranks) %>%
-      {if(rm_ssp_mismatches) dplyr::filter(.,!(original_is_tri & returned_rank == "species")) else .} %>%
-      dplyr::select(tidyr::any_of(c("taxa","ds","file","scale")))
+        dplyr::filter(returned_rank %in% target_ranks) %>%
+        {if(rm_ssp_mismatches) dplyr::filter(.,!(original_is_tri & returned_rank == "species")) else .} %>%
+        dplyr::select(tidyr::any_of(c("taxa","ds","file","scale")))
 
     } else {
 
