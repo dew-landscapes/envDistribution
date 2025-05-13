@@ -64,7 +64,7 @@ reg_taxa <- function(presence
 
   # Distance of distribution(s) to region ----
 
-  if(!is.na(distrib_file)|!is.null(distrib_file)){
+  if(!any(is.na(distrib_file)|is.null(distrib_file))){
 
     distrib_dist <- distrib_file %>%
       purrr::map(\(x) sfarrow::st_read_parquet(x)) %>%
@@ -94,12 +94,12 @@ reg_taxa <- function(presence
 
   # Relevant taxa to region ----
   pres_distrib <- pres_dist %>%
-    {if(!is.na(distrib_file)|!is.null(distrib_file)) dplyr::full_join(., distrib_dist) %>%
+    {if(!any(is.na(distrib_file)|is.null(distrib_file))) dplyr::full_join(., distrib_dist) %>%
         dplyr::mutate(in_region = pres_dist <= buf|distrib_dist <= buf)
-      else . %>%
-        dplyr::mutate(in_region = pres_dist <= buf)
+      else dplyr::mutate(., in_region = pres_dist <= buf)
     } %>%
-    dplyr::distinct(taxa, pres_dist, distrib_dist, in_region) %>%
+    dplyr::select(tidyr::any_of(c("taxa", "pres_dist", "distrib_dist", "in_region"))) %>%
+    dplyr::distinct() %>%
     {if(remove) dplyr::filter(., in_region) else .}
 
   rel_taxa <- pres_distrib |>
@@ -110,7 +110,8 @@ reg_taxa <- function(presence
                        dplyr::select(taxa, species)
     ) |>
     dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies", taxa, NA)) |>
-    dplyr::distinct(species, subspecies, pres_dist, distrib_dist, in_region) %>%
+    dplyr::select(tidyr::any_of(c("species", "subspecies", "pres_dist", "distrib_dist", "in_region"))) %>%
+    dplyr::distinct() %>%
     {if(remove) dplyr::select(., -in_region) else .}
 
   return(rel_taxa)
