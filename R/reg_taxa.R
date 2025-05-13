@@ -112,7 +112,7 @@ reg_taxa <- function(presence
                        dplyr::select(taxa, species, returned_rank)
     ) |>
     dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies", taxa, NA)) |>
-    dplyr::distinct(species, subspecies, pres_dist, distrib_dist, in_region) |>
+    dplyr::distinct(species, subspecies, pres_dist, distrib_dist, in_region) %>%
     {if(remove) dplyr::select(., -in_region) else .}
 
   return(rel_taxa)

@@ -56,42 +56,38 @@ where there may be other irrelevant trinomials occurring outside the region of i
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">reg_taxa</span><span class="op">(</span></span>
-<span>  <span class="va">bio_df</span>,</span>
-<span>  <span class="va">out_dir</span>,</span>
+<span>  <span class="va">presence</span>,</span>
+<span>  distrib_file <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  <span class="va">region_bound</span>,</span>
-<span>  force_new <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">taxa</span>,</span>
 <span>  pres_x <span class="op">=</span> <span class="st">"long"</span>,</span>
 <span>  pres_y <span class="op">=</span> <span class="st">"lat"</span>,</span>
-<span>  in_crs <span class="op">=</span> <span class="fl">4326</span>,</span>
-<span>  out_crs <span class="op">=</span> <span class="va">in_crs</span>,</span>
+<span>  pres_crs <span class="op">=</span> <span class="fl">4326</span>,</span>
+<span>  use_crs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  taxonomy <span class="op">=</span> <span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_read.html" class="external-link">tar_read</a></span><span class="op">(</span><span class="va">taxonomy</span>, store <span class="op">=</span> <span class="fu">fs</span><span class="fu">::</span><span class="fu"><a href="https://fs.r-lib.org/reference/path.html" class="external-link">path</a></span><span class="op">(</span><span class="st">"H:/dev/out/envCleaned"</span>,</span>
-<span>    <span class="st">"sa_br_dissolve______0__P50Y__sa_br_dissolve"</span>, <span class="st">"90__90__P1Y__subspecies"</span>, <span class="st">"clean"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  listed_df <span class="op">=</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/read_parquet.html" class="external-link">read_parquet</a></span><span class="op">(</span><span class="fu">fs</span><span class="fu">::</span><span class="fu"><a href="https://fs.r-lib.org/reference/path.html" class="external-link">path</a></span><span class="op">(</span><span class="st">"H:"</span>, <span class="st">"data"</span>, <span class="st">"taxonomy"</span>,</span>
-<span>    <span class="st">"all_status_galah.parquet"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  taxa_ds <span class="op">=</span> <span class="fu"><a href="dists_source.html">dists_source</a></span><span class="op">(</span>distrib_dir <span class="op">=</span> <span class="va">data_dir</span>, sources <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"epbc"</span>, <span class="st">"expert"</span><span class="op">)</span>,</span>
-<span>    source_rank <span class="op">=</span> <span class="cn">FALSE</span>, datatype <span class="op">=</span> <span class="st">"vector"</span><span class="op">)</span></span>
+<span>  <span class="va">taxonomy</span>,</span>
+<span>  remove <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>bio_df</dt>
-<dd><p>Data frame with taxa column, and lat &amp; long columns.</p></dd>
+    <dl><dt>presence</dt>
+<dd><p>Cleaned and filtered dataframe of presences.</p></dd>
 
 
-<dt>out_dir</dt>
-<dd><p>Character. Directory path for the results files to be saved (summary_stats.rds and mcp_noreg.parquet).
-mcp_noreg will be saved by <code><a href="https://wcjochem.github.io/sfarrow/reference/st_write_parquet.html" class="external-link">sfarrow::st_write_parquet()</a></code>. Currently will not work very well with any
-full stop in the path. Other file types are changed to .parquet.</p></dd>
+<dt>distrib_file</dt>
+<dd><p>Character. File path/s for the relevant distributions per taxa. If no relevant distribution, then use NA.
+Currently, only parquet files are accepted.
+Use sfarrow::st_write_parquet to write sf objects to parquet.</p></dd>
 
 
 <dt>region_bound</dt>
 <dd><p>sf object. Region boundary polygon.</p></dd>
 
 
-<dt>force_new</dt>
-<dd><p>Logical. If any of the results files in the <code>out_dir</code> exists, recreate it?</p></dd>
+<dt>taxa</dt>
+<dd><p>Character. Name of the taxa. Needed for joining to taxonomy to obtain species for trinomials (see below).</p></dd>
 
 
 <dt>pres_x, pres_y</dt>
@@ -99,12 +95,11 @@ full stop in the path. Other file types are changed to .parquet.</p></dd>
 the x and y coordinates.</p></dd>
 
 
-<dt>in_crs</dt>
-<dd><p>epsg code for coordinates in <code>presence</code>.</p></dd>
-
-
-<dt>out_crs</dt>
-<dd><p>epsg code for coordinates in output grid.</p></dd>
+<dt>use_crs</dt>
+<dd><p>Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins or intersections.
+Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
+can sometimes help with spherical geometry issues. If NULL, the crs of the region_bound will be used as the standard
+(i.e. the presence coords will be converted to this crs before joining or intersecting).</p></dd>
 
 
 <dt>buf</dt>
@@ -112,19 +107,25 @@ the x and y coordinates.</p></dd>
 
 
 <dt>taxonomy</dt>
-<dd><p>Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.</p></dd>
+<dd><p>Taxonomy object returned by envClean::make_taxonomy in relation to the taxa.
+Must have subspecies level taxonomy.</p></dd>
 
 
-<dt>taxa_col</dt>
-<dd><p>Character. Taxa column in bio_df and taxa_ds (must be the same).</p></dd>
+<dt>remove</dt>
+<dd><p>Logical. Remove out of region taxa?</p></dd>
+
+
+<dt>in_crs</dt>
+<dd><p>epsg code for coordinates in <code>presence</code>.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
     
 
-<p>summary_stats.rds with aoo and eoo stats,
-and mcp_noreg.parquet with the mcp excluding regional presences.</p>
+<p>Data frame with species column, subspecies column, and 'pres_dist' &amp; 'distrib_dist' columns indicating
+distance in metres from region to closest presence and distribution respectively. If remove == TRUE, rows with
+out of region subspecies will not appear.</p>
     </div>
 
   </div>

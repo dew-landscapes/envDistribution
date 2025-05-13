@@ -5,50 +5,51 @@
 \title{Return relevant taxa to a region of interest based on occurrences and or distributions.}
 \usage{
 reg_taxa(
-  bio_df,
-  out_dir,
+  presence,
+  distrib_file = NA,
   region_bound,
-  force_new = FALSE,
+  taxa,
   pres_x = "long",
   pres_y = "lat",
-  in_crs = 4326,
-  out_crs = in_crs,
+  pres_crs = 4326,
+  use_crs = NULL,
   buf = 0,
-  taxonomy = targets::tar_read(taxonomy, store = fs::path("H:/dev/out/envCleaned",
-    "sa_br_dissolve______0__P50Y__sa_br_dissolve", "90__90__P1Y__subspecies", "clean")),
-  listed_df = arrow::read_parquet(fs::path("H:", "data", "taxonomy",
-    "all_status_galah.parquet")),
-  taxa_ds = dists_source(distrib_dir = data_dir, sources = c("epbc", "expert"),
-    source_rank = FALSE, datatype = "vector")
+  taxonomy,
+  remove = FALSE
 )
 }
 \arguments{
-\item{bio_df}{Data frame with taxa column, and lat & long columns.}
+\item{presence}{Cleaned and filtered dataframe of presences.}
 
-\item{out_dir}{Character. Directory path for the results files to be saved (summary_stats.rds and mcp_noreg.parquet).
-mcp_noreg will be saved by \code{sfarrow::st_write_parquet()}. Currently will not work very well with any
-full stop in the path. Other file types are changed to .parquet.}
+\item{distrib_file}{Character. File path/s for the relevant distributions per taxa. If no relevant distribution, then use NA.
+Currently, only parquet files are accepted.
+Use sfarrow::st_write_parquet to write sf objects to parquet.}
 
 \item{region_bound}{sf object. Region boundary polygon.}
 
-\item{force_new}{Logical. If any of the results files in the \code{out_dir} exists, recreate it?}
+\item{taxa}{Character. Name of the taxa. Needed for joining to taxonomy to obtain species for trinomials (see below).}
 
 \item{pres_x, pres_y}{Character. Name of the columns in \code{presence} that have
 the x and y coordinates.}
 
-\item{in_crs}{epsg code for coordinates in \code{presence}.}
-
-\item{out_crs}{epsg code for coordinates in output grid.}
+\item{use_crs}{Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins or intersections.
+Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
+can sometimes help with spherical geometry issues. If NULL, the crs of the region_bound will be used as the standard
+(i.e. the presence coords will be converted to this crs before joining or intersecting).}
 
 \item{buf}{Distance in metres to buffer the \code{region_bound}.}
 
-\item{taxonomy}{Taxonomy object returned by envClean::make_taxonomy in relation to the taxa in bio_df and taxa_ds.}
+\item{taxonomy}{Taxonomy object returned by envClean::make_taxonomy in relation to the taxa.
+Must have subspecies level taxonomy.}
 
-\item{taxa_col}{Character. Taxa column in bio_df and taxa_ds (must be the same).}
+\item{remove}{Logical. Remove out of region taxa?}
+
+\item{in_crs}{epsg code for coordinates in \code{presence}.}
 }
 \value{
-summary_stats.rds with aoo and eoo stats,
-and mcp_noreg.parquet with the mcp excluding regional presences.
+Data frame with species column, subspecies column, and 'pres_dist' & 'distrib_dist' columns indicating
+distance in metres from region to closest presence and distribution respectively. If remove == TRUE, rows with
+out of region subspecies will not appear.
 }
 \description{
 Useful for species level analyses seeking to link to relevant trinomials (subspecies, races, varieties, forms, etc),
