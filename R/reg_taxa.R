@@ -104,7 +104,7 @@ reg_taxa <- function(presence
       else . %>%
         dplyr::mutate(in_region = pres_dist <= buf)
       } %>%
-    dplyr::distinct(taxa, pres_dist, distrib_dist, in_region) |>
+    dplyr::distinct(taxa, pres_dist, distrib_dist, in_region) %>%
     {if(remove) dplyr::filter(., in_region) else .}
 
   rel_taxa <- pres_distrib |>
