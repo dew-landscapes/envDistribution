@@ -43,7 +43,7 @@ reg_taxa <- function(presence
 ) {
 
   # Distance of closest presence to region ----
-  pres_dist <- pres %>%
+  pres_dist <- presence %>%
     dplyr::distinct(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) %>%
     sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
@@ -77,21 +77,16 @@ reg_taxa <- function(presence
       sf::st_make_valid() %>%
       dplyr::summarise() %>%
       sf::st_make_valid() %>%
-      purrr::map_dbl(
-        , \(x) nngeo::st_nn(region_bound
-                            ,
-                            , k = 1
-                            , maxdist = Inf
-                            , returnDist = TRUE
-                            , progress = FALSE
-                            , parallel = 1
-        ) %>%
-          .$dist %>%
-          unlist()
-        , .options = furrr::furrr_options(globals = "settings"
-                                          , seed = TRUE
-        )
+      nngeo::st_nn(region_bound
+                   , .
+                   , k = 1
+                   , maxdist = Inf
+                   , returnDist = TRUE
+                   , progress = FALSE
+                   , parallel = 1
       ) %>%
+      .$dist %>%
+      unlist() %>%
       tibble::as_tibble_col(column_name = "distrib_dist") %>%
       dplyr::mutate(taxa = taxa)
 
@@ -103,13 +98,16 @@ reg_taxa <- function(presence
         dplyr::mutate(in_region = pres_dist <= buf|distrib_dist <= buf)
       else . %>%
         dplyr::mutate(in_region = pres_dist <= buf)
-      } %>%
+    } %>%
     dplyr::distinct(taxa, pres_dist, distrib_dist, in_region) %>%
     {if(remove) dplyr::filter(., in_region) else .}
 
   rel_taxa <- pres_distrib |>
+    dplyr::left_join(taxonomy$subspecies$lutaxa |>
+                       dplyr::select(taxa, returned_rank)
+    ) |>
     dplyr::left_join(taxonomy$subspecies$taxonomy |>
-                       dplyr::select(taxa, species, returned_rank)
+                       dplyr::select(taxa, species)
     ) |>
     dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies", taxa, NA)) |>
     dplyr::distinct(species, subspecies, pres_dist, distrib_dist, in_region) %>%
