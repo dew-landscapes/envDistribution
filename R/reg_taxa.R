@@ -64,7 +64,7 @@ reg_taxa <- function(presence
 
   # Distance of distribution(s) to region ----
 
-  if(!is.na(distrib_file)){
+  if(!is.na(distrib_file)|!is.null(distrib_file)){
 
     distrib_dist <- distrib_file %>%
       purrr::map(\(x) sfarrow::st_read_parquet(x)) %>%
@@ -99,7 +99,7 @@ reg_taxa <- function(presence
 
   # Relevant taxa to region ----
   pres_distrib <- pres_dist %>%
-    {if(!is.na(distrib_file)) dplyr::full_join(., distrib_dist) %>%
+    {if(!is.na(distrib_file)|!is.null(distrib_file)) dplyr::full_join(., distrib_dist) %>%
         dplyr::mutate(in_region = pres_dist <= buf|distrib_dist <= buf)
       else . %>%
         dplyr::mutate(in_region = pres_dist <= buf)
