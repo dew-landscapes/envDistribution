@@ -109,7 +109,7 @@ reg_taxa <- function(presence
     dplyr::left_join(taxonomy$subspecies$taxonomy |>
                        dplyr::select(taxa, species)
     ) |>
-    dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies", taxa, NA)) |>
+    dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies" & stringr::str_count(taxa, "\\w+") > 2, taxa, NA)) |> # count of words needed to overcome erroneous subspecies e.g. arising from hybrids - Acacia provincialis/retinodes
     dplyr::select(tidyr::any_of(c("species", "subspecies", "pres_dist", "distrib_dist", "in_region"))) %>%
     dplyr::distinct() %>%
     {if(remove) dplyr::select(., -in_region) else .}
