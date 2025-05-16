@@ -122,8 +122,10 @@ reg_taxa <- function(presence
 
     }
 
-    mcp_dist <- mcp |>
-      sf::st_transform(crs = use_crs) %>%
+    mcp_dist <- mcp %>%
+      {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+        else sf::st_transform(crs = sf::st_crs(., region_bound))
+      } %>%
       nngeo::st_nn(region_bound
                    , .
                    , k = 1
