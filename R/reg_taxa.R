@@ -26,9 +26,10 @@
 #' If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from `presence`.
 #' Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.
 #'
-#' @return Data frame with species column, subspecies column, and 'pres_dist' & 'distrib_dist' columns indicating
-#' distance in metres from region to closest presence and distribution respectively. If remove == TRUE, rows with
-#' out of region subspecies will not appear.
+#' @return Data frame with species column, subspecies column, and 'pres_dist',
+#' 'distrib_dist' (if relevant) & 'mcp_dist' (if relevant) columns indicating distance
+#' in metres from region to closest presence, distribution and mcp respectively.
+#' If remove == TRUE, rows with out of region subspecies will not appear.
 #'
 #' @export
 #'
@@ -100,7 +101,7 @@ reg_taxa <- function(presence
 
   }
 
-  # MCP overlap with region ----
+  # Distance of MCP to region ----
   if(use_mcp){
 
     if(!is.null(mcp_file)) {
