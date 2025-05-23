@@ -51,7 +51,8 @@ bi_to_tri <- function(presences
   #   dplyr::count(subspecies)
 
   bi_pres <- all_pres %>%
-    dplyr::filter(is.na(subspecies))
+    dplyr::filter(is.na(subspecies)) |>
+    dplyr::select(-subspecies)
 
   tri_pres <- all_pres %>%
     dplyr::filter(!is.na(subspecies))
@@ -269,7 +270,7 @@ bi_to_tri <- function(presences
 
   ## update per trinomial ----
 
-  tri |>
+  res <- tri |>
     purrr::map(\(x) {
 
       ### choose polygon ----
@@ -281,10 +282,12 @@ bi_to_tri <- function(presences
         isFALSE()
 
       mcp <- mcp_tri |>
-        dplyr::filter(subspecies == x) |>
-        dplyr::pull(overlap) |>
-        any() |>
-        isFALSE()
+        dplyr::filter(subspecies == x) %>%
+        {if(nrow(.)) dplyr::pull(., overlap) %>%
+            any() %>%
+            isFALSE()
+          else FALSE
+        }
 
       if(distrib & mcp) {
 
@@ -296,7 +299,10 @@ bi_to_tri <- function(presences
                              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
                                else sf::st_transform(crs = sf::st_crs(., tri_dists))
                              }
-                           )
+          ) |>
+          dplyr::summarise() |>
+          sf::st_make_valid() |>
+          dplyr::mutate(subspecies = x)
 
       } else if(distrib & !mcp) {
 
@@ -312,7 +318,37 @@ bi_to_tri <- function(presences
 
       }
 
+      ### update names ----
+
+      new_names <- bi_pres %>%
+        sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
+        {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+          else sf::st_transform(crs = sf::st_crs(., tri_poly))
+        } |>
+        sf::st_join(tri_poly, left = FALSE) |>
+        sf::st_set_geometry(NULL) |>
+        dplyr::mutate(bi_to_tri = TRUE)
+
     }
-    )
+    ) |>
+    dplyr::bind_rows()
+
+  if(FALSE) {
+
+    library(tmap)
+    tmap_mode("view")
+
+    test <- bi_pres %>%
+      dplyr::left_join(res) |>
+      sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
+
+    tm_shape(test)+tm_dots("subspecies")+tm_shape(tri_dists)+tm_borders("subspecies")+tm_shape(tri_mcps)+tm_borders("subspecies")
+
+    dplyr::count(test |> sf::st_set_geometry(NULL), subspecies) |>
+      dplyr::mutate(pc = n/nrow(test)*100)
+
+  }
+
+  return(res)
 
 }
