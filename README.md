@@ -30,6 +30,7 @@ The following functions and data sets are provided in `envDistribution`.
 
 | object                                      | class    | description                                                                                                           |
 |:--------------------------------------------|:---------|:----------------------------------------------------------------------------------------------------------------------|
+| `envDistribution::bi_to_tri()`              | function | Convert binomial (species) level occurrences to trinomial based on distributions.                                     |
 | `envDistribution::calc_environ()`           | function | Calculate a species environment category based on occurrences.                                                        |
 | `envDistribution::clusts()`                 | function | Identify clusters of occurrence points based on distance.                                                             |
 | `envDistribution::dists_source()`           | function | Find file path to relevant taxa distribution (geographic range) parquet files.                                        |

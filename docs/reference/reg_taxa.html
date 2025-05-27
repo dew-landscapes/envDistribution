@@ -66,7 +66,9 @@ where there may be other irrelevant trinomials occurring outside the region of i
 <span>  use_crs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  <span class="va">taxonomy</span>,</span>
-<span>  remove <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  remove <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  use_mcp <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  mcp_file <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -115,6 +117,16 @@ Must have subspecies level taxonomy.</p></dd>
 <dd><p>Logical. Remove out of region taxa?</p></dd>
 
 
+<dt>use_mcp</dt>
+<dd><p>Logical. Use a minimum convex polygon (MCP) around presences to determine region overlap?</p></dd>
+
+
+<dt>mcp_file</dt>
+<dd><p>Character. If use_mcp == TRUE, optional file path of existing mcp to be used.
+If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from <code>presence</code>.
+Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.</p></dd>
+
+
 <dt>in_crs</dt>
 <dd><p>epsg code for coordinates in <code>presence</code>.</p></dd>
 
@@ -123,9 +135,10 @@ Must have subspecies level taxonomy.</p></dd>
     <h2>Value</h2>
     
 
-<p>Data frame with species column, subspecies column, and 'pres_dist' &amp; 'distrib_dist' columns indicating
-distance in metres from region to closest presence and distribution respectively. If remove == TRUE, rows with
-out of region subspecies will not appear.</p>
+<p>Data frame with species column, subspecies column, and 'pres_dist',
+'distrib_dist' (if relevant) &amp; 'mcp_dist' (if relevant) columns indicating distance
+in metres from region to closest presence, distribution and mcp respectively.
+If remove == TRUE, rows with out of region subspecies will not appear.</p>
     </div>
 
   </div>

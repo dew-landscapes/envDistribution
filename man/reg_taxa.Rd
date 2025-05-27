@@ -15,7 +15,9 @@ reg_taxa(
   use_crs = NULL,
   buf = 0,
   taxonomy,
-  remove = FALSE
+  remove = FALSE,
+  use_mcp = FALSE,
+  mcp_file = NULL
 )
 }
 \arguments{
@@ -44,12 +46,19 @@ Must have subspecies level taxonomy.}
 
 \item{remove}{Logical. Remove out of region taxa?}
 
+\item{use_mcp}{Logical. Use a minimum convex polygon (MCP) around presences to determine region overlap?}
+
+\item{mcp_file}{Character. If use_mcp == TRUE, optional file path of existing mcp to be used.
+If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from \code{presence}.
+Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.}
+
 \item{in_crs}{epsg code for coordinates in \code{presence}.}
 }
 \value{
-Data frame with species column, subspecies column, and 'pres_dist' & 'distrib_dist' columns indicating
-distance in metres from region to closest presence and distribution respectively. If remove == TRUE, rows with
-out of region subspecies will not appear.
+Data frame with species column, subspecies column, and 'pres_dist',
+'distrib_dist' (if relevant) & 'mcp_dist' (if relevant) columns indicating distance
+in metres from region to closest presence, distribution and mcp respectively.
+If remove == TRUE, rows with out of region subspecies will not appear.
 }
 \description{
 Useful for species level analyses seeking to link to relevant trinomials (subspecies, races, varieties, forms, etc),
