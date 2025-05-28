@@ -241,7 +241,7 @@ bi_to_tri <- function(species
         purrr::map(\(x) if(is(x, "sf")) sf::st_set_geometry(x, NULL)) |>
         dplyr::bind_rows() |>
         dplyr::distinct(subspecies) %>%
-        {if(nrow(.) > 1) dplyr::pull(., subspecies) |>
+        {if(nrow(tri_pres)) dplyr::pull(., subspecies) |>
             purrr::set_names() %>%
             purrr::map(\(x) {
 
@@ -271,11 +271,12 @@ bi_to_tri <- function(species
         dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
         dplyr::group_by(dplyr::across(tidyr::any_of(c("subspecies", "other_pres")))) |>
         dplyr::summarise(poly = list(poly)) |>
-        dplyr::ungroup()
+        dplyr::ungroup() %>%
+        {if(!"other_pres" %in% names(.)) dplyr::mutate(., other_pres = NA) else .}
 
       ## overlap ----
 
-      if(nrow(overlap_prep) > 1) {
+      if(nrow(overlap_prep)) {
 
         overlaps <- purrr::pmap(list(overlap_prep$subspecies
                                      , overlap_prep$other_pres
@@ -307,7 +308,7 @@ bi_to_tri <- function(species
 
             ### pres ----
 
-            if(!is.null(y) & !is.null(p)) {
+            if(all(!is.null(y), !is.na(y), !is.null(p))) {
 
               pres_overlap <- y %>%
                 sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
