@@ -2,9 +2,9 @@
 #' Convert binomial (species) level occurrences to trinomial based on distributions.
 #'
 #' @param species Character. Name of the species (binomial) to update occurrences to trinomial for.
-#' @param presences Data frame of presences relevant to the species and subspecies.
+#' @param presences Data frame of all binomial and trinomial presences relevant to the species.
 #' Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
-#' in `pres_x` & `pres_y`.
+#' in `pres_x` & `pres_y`. For binomial presences 'subspecies' should be NA.
 #' @param distrib_files Data frame of relevant distribution file paths for all the subspecies
 #' (e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
 #' Currently, only geoparquet files are accepted. Use sfarrow::st_write_parquet to write sf objects to parquet.
@@ -231,7 +231,8 @@ bi_to_tri <- function(species
     # overlaps ----
 
     # find polygons so that don't continue if only tri_pres and no polygons
-    polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust"))
+    polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust")) |>
+      purrr::discard(\(x) nrow(x) == 0)
 
     # run overlaps if polys exist
     if(length(polys)) {
@@ -256,12 +257,15 @@ bi_to_tri <- function(species
         } %>%
         {if(exists("tri_dist")) dplyr::left_join(., tri_dist |>
                                                    tidyr::nest(.by = subspecies, dist = tidyr::everything())
+                                                 , by = subspecies
         ) else .} %>%
         {if(exists("tri_mcp")) dplyr::left_join(., tri_mcp |>
                                                   tidyr::nest(.by = subspecies, mcp = tidyr::everything())
+                                                , by = subspecies
         ) else .} %>%
         {if(exists("tri_clust")) dplyr::left_join(., tri_clust |>
                                                     tidyr::nest(.by = subspecies, clust = tidyr::everything())
+                                                  , by = subspecies
         ) else .} |>
         tidyr::pivot_longer(cols = tidyr::any_of(c("dist", "mcp", "clust")), values_to = "poly") %>%
         dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
@@ -270,15 +274,6 @@ bi_to_tri <- function(species
         dplyr::ungroup()
 
       ## overlap ----
-
-      # find standard crs to use for all polys if use_crs is not set
-      std_crs <- overlap_prep$poly %>%
-        purrr::discard(is.null) %>%
-        .[[1]] %>%
-        .[[1]] %>%
-        sf::st_crs()
-
-      # determine overlaps
 
       if(nrow(overlap_prep) > 1) {
 
@@ -371,7 +366,7 @@ bi_to_tri <- function(species
                            dplyr::filter(subspecies %in% overlaps$subspecies)
         ) |>
         dplyr::rename(use_poly = poly) |>
-        dplyr::left_join(overlap_prep) |>
+        dplyr::left_join(overlap_prep, by = subspecies) |>
         dplyr::select(-tidyr::any_of("other_pres"))
 
       ## polygons ----
@@ -397,14 +392,14 @@ bi_to_tri <- function(species
                   p |>
                     dplyr::filter(subspecies == x) %>%
                     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                      else sf::st_transform(., crs = std_crs)
+                      else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
                     }
 
                 } else {
 
                   dplyr::slice(polys[[1]], 0) %>%
                     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                      else sf::st_transform(., crs = std_crs)
+                      else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
                     }
 
                 }
@@ -419,7 +414,7 @@ bi_to_tri <- function(species
 
             tri_poly <- dplyr::slice(polys[[1]], 0) %>%
               {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                else sf::st_transform(., crs = std_crs)
+                else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
               }
 
           }
@@ -455,7 +450,7 @@ bi_to_tri <- function(species
 
             ) |>
             dplyr::bind_rows() |>
-            dplyr::full_join(bi_pres) |>
+            dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
             dplyr::bind_rows(tri_pres)
 
           ## checks ----
