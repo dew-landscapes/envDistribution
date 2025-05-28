@@ -5,6 +5,7 @@
 \title{Convert binomial (species) level occurrences to trinomial based on distributions.}
 \usage{
 bi_to_tri(
+  species,
   presences,
   distrib_files = NULL,
   use_mcp = FALSE,
@@ -21,8 +22,10 @@ bi_to_tri(
 )
 }
 \arguments{
+\item{species}{Character. Name of the species (binomial) to update occurrences to trinomial for.}
+
 \item{presences}{Data frame of presences relevant to the species and subspecies.
-Must contain columns named 'species', 'subspecies', and x, y coordinate columns corresponding to the names
+Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
 in \code{pres_x} & \code{pres_y}.}
 
 \item{distrib_files}{Data frame of relevant distribution file paths for all the subspecies

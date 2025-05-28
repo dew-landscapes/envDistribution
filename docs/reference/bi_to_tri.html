@@ -54,6 +54,7 @@
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">bi_to_tri</span><span class="op">(</span></span>
+<span>  <span class="va">species</span>,</span>
 <span>  <span class="va">presences</span>,</span>
 <span>  distrib_files <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  use_mcp <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -72,9 +73,13 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>presences</dt>
+    <dl><dt>species</dt>
+<dd><p>Character. Name of the species (binomial) to update occurrences to trinomial for.</p></dd>
+
+
+<dt>presences</dt>
 <dd><p>Data frame of presences relevant to the species and subspecies.
-Must contain columns named 'species', 'subspecies', and x, y coordinate columns corresponding to the names
+Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
 in <code>pres_x</code> &amp; <code>pres_y</code>.</p></dd>
 
 
