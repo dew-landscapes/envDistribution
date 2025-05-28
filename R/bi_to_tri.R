@@ -113,28 +113,32 @@ bi_to_tri <- function(presences
           dplyr::select(-n) |>
           tidyr::nest(data = -c(subspecies))
 
-        tri_mcp <- purrr::pmap(list(mcp_prep$data
-                                    , mcp_prep$subspecies
-        )
-        , \(x,y) {
+        if(nrow(mcp_prep)) {
 
-          mcp <- make_mcp(presence = x
-                          , out_file = tempfile()
-                          , force_new = FALSE
-                          , pres_x = "long"
-                          , pres_y = "lat"
-                          , in_crs = pres_crs
-                          , out_crs = use_crs
-                          , buf = buf
-                          , clip = NULL
+          tri_mcp <- purrr::pmap(list(mcp_prep$data
+                                      , mcp_prep$subspecies
+          )
+          , \(x,y) {
+
+            mcp <- make_mcp(presence = x
+                            , out_file = tempfile()
+                            , force_new = FALSE
+                            , pres_x = "long"
+                            , pres_y = "lat"
+                            , in_crs = pres_crs
+                            , out_crs = use_crs
+                            , buf = buf
+                            , clip = NULL
+            ) |>
+              dplyr::mutate(subspecies = y) |>
+              sf::st_buffer(buf)
+
+          }
           ) |>
-            dplyr::mutate(subspecies = y) |>
-            sf::st_buffer(buf)
+            dplyr::bind_rows() |>
+            sf::st_make_valid()
 
         }
-        ) |>
-          dplyr::bind_rows() |>
-          sf::st_make_valid()
 
       } else if(!is.null(mcp_files)) {
 
@@ -157,10 +161,6 @@ bi_to_tri <- function(presences
           ) |>
           dplyr::bind_rows() |>
           sf::st_make_valid()
-
-      } else {
-
-        use_mcp <- FALSE
 
       }
 
