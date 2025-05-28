@@ -24,9 +24,9 @@ bi_to_tri(
 \arguments{
 \item{species}{Character. Name of the species (binomial) to update occurrences to trinomial for.}
 
-\item{presences}{Data frame of presences relevant to the species and subspecies.
+\item{presences}{Data frame of all binomial and trinomial presences relevant to the species.
 Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
-in \code{pres_x} & \code{pres_y}.}
+in \code{pres_x} & \code{pres_y}. For binomial presences 'subspecies' should be NA.}
 
 \item{distrib_files}{Data frame of relevant distribution file paths for all the subspecies
 (e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
