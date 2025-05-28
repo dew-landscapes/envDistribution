@@ -79,13 +79,13 @@ in <code>pres_x</code> &amp; <code>pres_y</code>.</p></dd>
 
 
 <dt>distrib_files</dt>
-<dd><p>Data frame of relevant distribution file paths for all the subspecies.
-If no relevant distribution, then use NA. Currently, only geoparquet files are accepted.
-Use sfarrow::st_write_parquet to write sf objects to parquet.</p></dd>
+<dd><p>Data frame of relevant distribution file paths for all the subspecies
+(e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
+Currently, only geoparquet files are accepted. Use sfarrow::st_write_parquet to write sf objects to parquet.</p></dd>
 
 
 <dt>use_mcp</dt>
-<dd><p>Logical. Use a minimum convex polygon (MCP) around presences to determine region overlap?</p></dd>
+<dd><p>Logical. Use a minimum convex polygon (MCP) around presences to determine relevant trinomials?</p></dd>
 
 
 <dt>mcp_files</dt>
@@ -94,16 +94,21 @@ If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from <cod
 Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.</p></dd>
 
 
+<dt>use_clust</dt>
+<dd><p>Logical. Use clusters around around presences to determine relevant trinomials?
+If TRUE, <code>use_crs</code> must correspond to a projected crs to allow clustering on a positive set of numbers.</p></dd>
+
+
 <dt>pres_x, pres_y</dt>
 <dd><p>Character. Name of the columns in <code>presences</code> that have
 the x and y coordinates.</p></dd>
 
 
 <dt>use_crs</dt>
-<dd><p>Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins or intersections.
+<dd><p>Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins.
 Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
 can sometimes help with spherical geometry issues. If NULL, the crs of the distribution will be used as the standard
-(i.e. the presence coords will be converted to this crs before joining or intersecting).</p></dd>
+(i.e. the <code>presences</code> will be converted to this crs before joining or intersecting).</p></dd>
 
 
 <dt>buf</dt>
@@ -111,7 +116,8 @@ can sometimes help with spherical geometry issues. If NULL, the crs of the distr
 
 
 <dt>clust_dist</dt>
-<dd><p>Integer. Distance to base clusters on in clust function if <code>use_clust</code> = TRUE.</p></dd>
+<dd><p>Integer. Distance to base clusters on in clust function if <code>use_clust</code> = TRUE.
+Needs to be in the units of the projected crs supplied in <code>use_crs</code>, e.g. metres.</p></dd>
 
 
 <dt>overrides</dt>
@@ -129,14 +135,17 @@ specified in 'poly', where 'poly' is a vector of values containing any of 'dist'
     <h2>Value</h2>
     
 
-<p>Data frame with updated names in taxa_col for taxa where distributions were found and
-did not overlap with multiple trinomials in presence or distributions.</p>
+<p>Data frame equivalent to <code>presences</code> with 'subspecies' updated
+for taxa where distributions were found and did not overlap with multiple trinomials in presence or distributions,
+and an additional 'bi_to_tri' column indicating which records were updated.</p>
     </div>
     <div id="details">
     <h2>Details</h2>
     <p>Will only update binomial occurrence records that fall within a distribution polygon to trinomial if no other
 trinomial presences or distributions for a species are found intersecting the distribution polygon.
-This avoids erroneously updating binomials to the wrong trinomial where distributions of subspecies overlap.</p>
+This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
+Distribution refers generally to all the polygons used to represent distributions,
+i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.</p>
     </div>
 
   </div>

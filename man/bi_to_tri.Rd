@@ -25,27 +25,31 @@ bi_to_tri(
 Must contain columns named 'species', 'subspecies', and x, y coordinate columns corresponding to the names
 in \code{pres_x} & \code{pres_y}.}
 
-\item{distrib_files}{Data frame of relevant distribution file paths for all the subspecies.
-If no relevant distribution, then use NA. Currently, only geoparquet files are accepted.
-Use sfarrow::st_write_parquet to write sf objects to parquet.}
+\item{distrib_files}{Data frame of relevant distribution file paths for all the subspecies
+(e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
+Currently, only geoparquet files are accepted. Use sfarrow::st_write_parquet to write sf objects to parquet.}
 
-\item{use_mcp}{Logical. Use a minimum convex polygon (MCP) around presences to determine region overlap?}
+\item{use_mcp}{Logical. Use a minimum convex polygon (MCP) around presences to determine relevant trinomials?}
 
 \item{mcp_files}{If use_mcp == TRUE, optional data frame of file paths of existing mcp files to be used.
 If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from \code{presences}.
 Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.}
 
+\item{use_clust}{Logical. Use clusters around around presences to determine relevant trinomials?
+If TRUE, \code{use_crs} must correspond to a projected crs to allow clustering on a positive set of numbers.}
+
 \item{pres_x, pres_y}{Character. Name of the columns in \code{presences} that have
 the x and y coordinates.}
 
-\item{use_crs}{Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins or intersections.
+\item{use_crs}{Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins.
 Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
 can sometimes help with spherical geometry issues. If NULL, the crs of the distribution will be used as the standard
-(i.e. the presence coords will be converted to this crs before joining or intersecting).}
+(i.e. the \code{presences} will be converted to this crs before joining or intersecting).}
 
 \item{buf}{Integer. Distance in metres to buffer the distribution.}
 
-\item{clust_dist}{Integer. Distance to base clusters on in clust function if \code{use_clust} = TRUE.}
+\item{clust_dist}{Integer. Distance to base clusters on in clust function if \code{use_clust} = TRUE.
+Needs to be in the units of the projected crs supplied in \code{use_crs}, e.g. metres.}
 
 \item{overrides}{Data frame containing subspecies and poly columns indicating any subspecies to
 override the overlap checking and force binomials to be updated within the polygon type
@@ -55,8 +59,9 @@ specified in 'poly', where 'poly' is a vector of values containing any of 'dist'
 \item{in_crs}{Integer. Coordinate reference system (epsg code) for coordinates in \code{presences}.}
 }
 \value{
-Data frame with updated names in taxa_col for taxa where distributions were found and
-did not overlap with multiple trinomials in presence or distributions.
+Data frame equivalent to \code{presences} with 'subspecies' updated
+for taxa where distributions were found and did not overlap with multiple trinomials in presence or distributions,
+and an additional 'bi_to_tri' column indicating which records were updated.
 }
 \description{
 Convert binomial (species) level occurrences to trinomial based on distributions.
@@ -64,5 +69,7 @@ Convert binomial (species) level occurrences to trinomial based on distributions
 \details{
 Will only update binomial occurrence records that fall within a distribution polygon to trinomial if no other
 trinomial presences or distributions for a species are found intersecting the distribution polygon.
-This avoids erroneously updating binomials to the wrong trinomial where distributions of subspecies overlap.
+This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
+Distribution refers generally to all the polygons used to represent distributions,
+i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.
 }
