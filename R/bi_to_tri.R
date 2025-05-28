@@ -241,7 +241,7 @@ bi_to_tri <- function(species
         purrr::map(\(x) if(is(x, "sf")) sf::st_set_geometry(x, NULL)) |>
         dplyr::bind_rows() |>
         dplyr::distinct(subspecies) %>%
-        {if(nrow(tri_pres)) dplyr::pull(., subspecies) |>
+        {if(nrow(tri_pres) & nrow(.) > 1) dplyr::pull(., subspecies) |>
             purrr::set_names() %>%
             purrr::map(\(x) {
 
