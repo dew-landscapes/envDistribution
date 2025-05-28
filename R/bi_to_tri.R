@@ -249,7 +249,7 @@ bi_to_tri <- function(presences
       {if(exists("tri_clust")) dplyr::left_join(., tri_clust |>
                                                   tidyr::nest(.by = subspecies, clust = tidyr::everything())
       ) else .} |>
-      tidyr::pivot_longer(cols = c(dist, mcp, clust), values_to = "poly") %>%
+      tidyr::pivot_longer(cols = tidyr::any_of(c("dist", "mcp", "clust")), values_to = "poly") %>%
       dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
       dplyr::group_by(subspecies, other_pres) |>
       dplyr::summarise(poly = list(poly)) |>
@@ -350,112 +350,122 @@ bi_to_tri <- function(presences
 
     ## polygons ----
 
-    update_poly <- purrr::pmap(list(update_prep$subspecies
-                                    , update_prep$use_poly
-                                    , update_prep$poly
-    )
-    , \(x,y,z) {
+    if(nrow(update_prep)) {
 
-      run <- all(purrr::map_lgl(unname(z[y]), \(r) !is.null(r)))
+      update_poly <- purrr::pmap(list(update_prep$subspecies
+                                      , update_prep$use_poly
+                                      , update_prep$poly
+      )
+      , \(x,y,z) {
 
-      if(run) {
+        run <- all(purrr::map_lgl(unname(z[y]), \(r) !is.null(r)))
 
-        # construct update poly from all relevant polys
-        tri_poly <- z[y] %>%
-          purrr::map(\(p) {
+        if(run) {
 
-            if(!is.null(p)) {
+          # construct update poly from all relevant polys
+          tri_poly <- z[y] %>%
+            purrr::map(\(p) {
 
-              p |>
-                dplyr::filter(subspecies == x) %>%
-                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                  else sf::st_transform(., crs = std_crs)
-                }
+              if(!is.null(p)) {
 
-            } else {
+                p |>
+                  dplyr::filter(subspecies == x) %>%
+                  {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+                    else sf::st_transform(., crs = std_crs)
+                  }
 
-              dplyr::slice(tri_dist, 0) %>%
-                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                  else sf::st_transform(., crs = std_crs)
-                }
+              } else {
+
+                dplyr::slice(tri_dist, 0) %>%
+                  {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+                    else sf::st_transform(., crs = std_crs)
+                  }
+
+              }
 
             }
+            ) |>
+            dplyr::bind_rows() |>
+            dplyr::summarise() |>
+            dplyr::mutate(subspecies = x)
 
-          }
-          ) |>
-          dplyr::bind_rows() |>
-          dplyr::summarise() |>
-          dplyr::mutate(subspecies = x)
+        } else {
 
-      } else {
+          tri_poly <- dplyr::slice(tri_dist, 0) %>%
+            {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+              else sf::st_transform(., crs = std_crs)
+            }
 
-        tri_poly <- dplyr::slice(tri_dist, 0) %>%
-          {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-            else sf::st_transform(., crs = std_crs)
-          }
+        }
 
-      }
-
-      return(tri_poly)
-
-    }
-    ) |>
-      dplyr::bind_rows()
-
-    ## update names ----
-    # done separately to above to enable easy mapping of polygons used vs updated occurrences
-    update_names <- update_poly |>
-      tidyr::nest(.by = subspecies, poly = c(subspecies, geometry)) |>
-      dplyr::pull(poly) |>
-      purrr::map(\(p) {
-
-        new_names <- bi_pres %>%
-          sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
-          {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-            else sf::st_transform(crs = sf::st_crs(., p))
-          } |>
-          sf::st_join(p, left = FALSE) |>
-          sf::st_set_geometry(NULL) |>
-          dplyr::mutate(bi_to_tri = TRUE)
-
-        return(new_names)
+        return(tri_poly)
 
       }
-
       ) |>
-      dplyr::bind_rows() |>
-      dplyr::full_join(bi_pres) |>
-      dplyr::bind_rows(tri_pres)
+        dplyr::bind_rows()
 
-    ## checks ----
+      ## update names ----
+      # done separately to above to enable easy mapping of polygons used vs updated occurrences
+      update_names <- update_poly |>
+        tidyr::nest(.by = subspecies, poly = c(subspecies, geometry)) |>
+        dplyr::pull(poly) |>
+        purrr::map(\(p) {
 
-    if(FALSE) {
+          new_names <- bi_pres %>%
+            sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
+            {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+              else sf::st_transform(crs = sf::st_crs(., p))
+            } |>
+            sf::st_join(p, left = FALSE) |>
+            sf::st_set_geometry(NULL) |>
+            dplyr::mutate(bi_to_tri = TRUE)
 
-      library(tmap)
-      tmap_mode("view")
+          return(new_names)
 
-      test <- bi_pres %>%
-        dplyr::left_join(update_names) |>
-        sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
+        }
 
-      tm_shape(test)+tm_dots("subspecies")+tm_shape(update_poly)+tm_borders("subspecies")
+        ) |>
+        dplyr::bind_rows() |>
+        dplyr::full_join(bi_pres) |>
+        dplyr::bind_rows(tri_pres)
 
-      test |>
-        sf::st_set_geometry(NULL) |>
-        dplyr::count(subspecies) |>
-        dplyr::mutate(pc = n/nrow(test)*100)
+      ## checks ----
+
+      if(FALSE) {
+
+        library(tmap)
+        tmap_mode("view")
+
+        test <- bi_pres %>%
+          dplyr::left_join(update_names) |>
+          sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
+
+        tm_shape(test)+tm_dots("subspecies")+tm_shape(update_poly)+tm_borders("subspecies")
+
+        test |>
+          sf::st_set_geometry(NULL) |>
+          dplyr::count(subspecies) |>
+          dplyr::mutate(pc = n/nrow(test)*100)
+
+      }
+
+      ## summary ----
+
+      bi_updated <- update_names |>
+        dplyr::filter(bi_to_tri)
+
+      pc <- nrow(bi_updated)/nrow(bi_pres)*100
+
+      message(nrow(bi_updated), " of ", nrow(bi_pres)
+              ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
+
+    } else {
+
+      update_names <- all_pres
+
+      message("No binomials updated to trinomial due to overlapping trinomial distributions")
 
     }
-
-    ## summary ----
-
-    bi_updated <- update_names |>
-      dplyr::filter(bi_to_tri)
-
-    pc <- nrow(bi_updated)/nrow(bi_pres)*100
-
-    message(nrow(bi_updated), " of ", nrow(bi_pres)
-            ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
 
   } else {
 
