@@ -1,8 +1,9 @@
 
 #' Convert binomial (species) level occurrences to trinomial based on distributions.
 #'
+#' @param species Character. Name of the species (binomial) to update occurrences to trinomial for.
 #' @param presences Data frame of presences relevant to the species and subspecies.
-#' Must contain columns named 'species', 'subspecies', and x, y coordinate columns corresponding to the names
+#' Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
 #' in `pres_x` & `pres_y`.
 #' @param distrib_files Data frame of relevant distribution file paths for all the subspecies
 #' (e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
@@ -42,7 +43,8 @@
 #' @export
 #'
 
-bi_to_tri <- function(presences
+bi_to_tri <- function(species
+                      , presences
                       , distrib_files = NULL
                       , use_mcp = FALSE
                       , mcp_files = NULL
@@ -229,8 +231,7 @@ bi_to_tri <- function(presences
     # overlaps ----
 
     # find polygons so that don't continue if only tri_pres and no polygons
-    polys <- mget(ls(pattern = "^tri_")) %>%
-     purrr::discard_at("tri_pres")
+    polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust"))
 
     # run overlaps if polys exist
     if(length(polys)) {
@@ -401,7 +402,7 @@ bi_to_tri <- function(presences
 
                 } else {
 
-                  dplyr::slice(tri_dist, 0) %>%
+                  dplyr::slice(polys[[1]], 0) %>%
                     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
                       else sf::st_transform(., crs = std_crs)
                     }
@@ -416,7 +417,7 @@ bi_to_tri <- function(presences
 
           } else {
 
-            tri_poly <- dplyr::slice(tri_dist, 0) %>%
+            tri_poly <- dplyr::slice(polys[[1]], 0) %>%
               {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
                 else sf::st_transform(., crs = std_crs)
               }
@@ -431,64 +432,75 @@ bi_to_tri <- function(presences
 
         ## update names ----
         # done separately to above to enable easy mapping of polygons used vs updated occurrences
-        update_names <- update_poly |>
-          tidyr::nest(.by = subspecies, poly = c(subspecies, geometry)) |>
-          dplyr::pull(poly) |>
-          purrr::map(\(p) {
 
-            new_names <- bi_pres %>%
-              sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
-              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                else sf::st_transform(crs = sf::st_crs(., p))
-              } |>
-              sf::st_join(p, left = FALSE) |>
+        if(nrow(update_poly)) {
+
+          update_names <- update_poly |>
+            tidyr::nest(.by = subspecies, poly = c(subspecies, geometry)) |>
+            dplyr::pull(poly) |>
+            purrr::map(\(p) {
+
+              new_names <- bi_pres %>%
+                sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
+                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+                  else sf::st_transform(crs = sf::st_crs(., p))
+                } |>
+                sf::st_join(p, left = FALSE) |>
+                sf::st_set_geometry(NULL) |>
+                dplyr::mutate(bi_to_tri = TRUE)
+
+              return(new_names)
+
+            }
+
+            ) |>
+            dplyr::bind_rows() |>
+            dplyr::full_join(bi_pres) |>
+            dplyr::bind_rows(tri_pres)
+
+          ## checks ----
+
+          if(FALSE) {
+
+            library(tmap)
+            tmap_mode("view")
+
+            test <- bi_pres %>%
+              dplyr::left_join(update_names) |>
+              sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
+
+            tm_shape(test)+tm_dots("subspecies")+tm_shape(update_poly)+tm_borders("subspecies")
+
+            test |>
               sf::st_set_geometry(NULL) |>
-              dplyr::mutate(bi_to_tri = TRUE)
-
-            return(new_names)
+              dplyr::count(subspecies) |>
+              dplyr::mutate(pc = n/nrow(test)*100)
 
           }
 
-          ) |>
-          dplyr::bind_rows() |>
-          dplyr::full_join(bi_pres) |>
-          dplyr::bind_rows(tri_pres)
+          ## summary ----
 
-        ## checks ----
+          bi_updated <- update_names |>
+            dplyr::filter(bi_to_tri)
 
-        if(FALSE) {
+          pc <- nrow(bi_updated)/nrow(bi_pres)*100
 
-          library(tmap)
-          tmap_mode("view")
+          message(species, ": ", nrow(bi_updated), " of ", nrow(bi_pres)
+                  ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
 
-          test <- bi_pres %>%
-            dplyr::left_join(update_names) |>
-            sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
+        } else {
 
-          tm_shape(test)+tm_dots("subspecies")+tm_shape(update_poly)+tm_borders("subspecies")
+          update_names <- all_pres
 
-          test |>
-            sf::st_set_geometry(NULL) |>
-            dplyr::count(subspecies) |>
-            dplyr::mutate(pc = n/nrow(test)*100)
+          message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions, overlapping cluster polygons and unable to construct an mcp due to < 3 occurrences")
 
         }
-
-        ## summary ----
-
-        bi_updated <- update_names |>
-          dplyr::filter(bi_to_tri)
-
-        pc <- nrow(bi_updated)/nrow(bi_pres)*100
-
-        message(nrow(bi_updated), " of ", nrow(bi_pres)
-                ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
 
       } else {
 
         update_names <- all_pres
 
-        message("No binomials updated to trinomial due to overlapping trinomial distributions")
+        message(species, ": ", "No binomials updated to trinomial due to overlapping trinomial distributions")
 
       }
 
@@ -496,7 +508,7 @@ bi_to_tri <- function(presences
 
       update_names <- all_pres
 
-      message("No binomials updated to trinomial due to no trinomial distributions and unable to construct mcp or clust polygons due to < 3 occurrences")
+      message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions and unable to construct mcp or clust polygons due to < 3 occurrences")
 
     }
 
@@ -506,16 +518,22 @@ bi_to_tri <- function(presences
 
     if(!nrow(bi_pres)) {
 
-      message("No binomials updated to trinomial due to no binomial occurrences")
+      message(species, ": ", "No binomials updated to trinomial due to no binomial occurrences")
 
     } else {
 
-      message("No binomials updated to trinomial due to no trinomial distributions or occurrences")
+      message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions or occurrences")
 
     }
 
   }
 
-  return(update_names)
+  res <- update_names |>
+    dplyr::mutate(species = species) |>
+    dplyr::relocate(species)
+
+  rm(list=setdiff(ls(), "res"))
+
+  return(res)
 
 }
