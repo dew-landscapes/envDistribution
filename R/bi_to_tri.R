@@ -228,24 +228,31 @@ bi_to_tri <- function(presences
 
     # overlaps ----
 
-    if(length(mget(ls(pattern = "^tri_")))) {
+    # find polygons so that don't continue if only tri_pres and no polygons
+    polys <- mget(ls(pattern = "^tri_")) %>%
+     purrr::discard_at("tri_pres")
+
+    # run overlaps if polys exist
+    if(length(polys)) {
 
       overlap_prep <- mget(ls(pattern = "^tri_")) |>
         purrr::map(\(x) if(is(x, "sf")) sf::st_set_geometry(x, NULL)) |>
         dplyr::bind_rows() |>
-        dplyr::distinct(subspecies) |>
-        dplyr::pull(subspecies) |>
-        purrr::set_names() |>
-        purrr::map(\(x) {
+        dplyr::distinct(subspecies) %>%
+        {if(nrow(.) > 1) dplyr::pull(., subspecies) |>
+            purrr::set_names() %>%
+            purrr::map(\(x) {
 
-          tri_pres |>
-            dplyr::filter(subspecies != x) |>
-            dplyr::select(!subspecies)
+              other_pres <- tri_pres |>
+                dplyr::filter(subspecies != x) |>
+                dplyr::select(-subspecies)
 
-        }
-        ) |>
-        purrr::list_rbind(names_to = "subspecies") |>
-        tidyr::nest(.by = subspecies, other_pres = tidyr::all_of(c(pres_x, pres_y))) %>%
+            }
+            ) %>%
+            purrr::list_rbind(names_to = "subspecies") |>
+            tidyr::nest(.by = subspecies, other_pres = tidyr::all_of(c(pres_x, pres_y)))
+          else .
+        } %>%
         {if(exists("tri_dist")) dplyr::left_join(., tri_dist |>
                                                    tidyr::nest(.by = subspecies, dist = tidyr::everything())
         ) else .} %>%
@@ -257,7 +264,7 @@ bi_to_tri <- function(presences
         ) else .} |>
         tidyr::pivot_longer(cols = tidyr::any_of(c("dist", "mcp", "clust")), values_to = "poly") %>%
         dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
-        dplyr::group_by(subspecies, other_pres) |>
+        dplyr::group_by(dplyr::across(tidyr::any_of(c("subspecies", "other_pres")))) |>
         dplyr::summarise(poly = list(poly)) |>
         dplyr::ungroup()
 
@@ -271,72 +278,84 @@ bi_to_tri <- function(presences
         sf::st_crs()
 
       # determine overlaps
-      overlaps <- purrr::pmap(list(overlap_prep$subspecies
-                                   , overlap_prep$other_pres
-                                   , overlap_prep$poly
-      )
-      , \(x,y,z) {
 
-        overlap <- purrr::imap(z, \(p, idp) {
+      if(nrow(overlap_prep) > 1) {
 
-          ### poly ----
+        overlaps <- purrr::pmap(list(overlap_prep$subspecies
+                                     , overlap_prep$other_pres
+                                     , overlap_prep$poly
+        )
+        , \(x,y,z) {
 
-          if(!is.null(p)) {
+          overlap <- purrr::imap(z, \(p, idp) {
 
-            poly <- p |>
-              dplyr::filter(subspecies == x) |>
-              dplyr::select(-subspecies)
+            ### poly ----
 
-            other_poly <- p |>
-              dplyr::filter(subspecies != x)
+            if(!is.null(p)) {
 
-            poly_overlap <- other_poly |>
-              sf::st_join(poly, left = FALSE)
+              poly <- p |>
+                dplyr::filter(subspecies == x) |>
+                dplyr::select(-subspecies)
 
-          } else {
+              other_poly <- p |>
+                dplyr::filter(subspecies != x)
 
-            poly_overlap <- tibble::tibble()
+              poly_overlap <- other_poly |>
+                sf::st_join(poly, left = FALSE)
+
+            } else {
+
+              poly_overlap <- tibble::tibble()
+
+            }
+
+            ### pres ----
+
+            if(!is.null(y) & !is.null(p)) {
+
+              pres_overlap <- y %>%
+                sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
+                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+                  else sf::st_transform(crs = sf::st_crs(., z[[1]]))
+                } %>%
+                sf::st_join(poly %>%
+                              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
+                            , left = FALSE
+                )
+
+            } else {
+
+              pres_overlap <- tibble::tibble()
+
+            }
+
+            res <- tibble::tibble(subspecies = x
+                                  , poly = idp
+                                  , pres_overlap = nrow(pres_overlap)
+                                  , poly_overlap = nrow(poly_overlap)
+            ) |>
+              dplyr::mutate(overlap = dplyr::if_any(tidyr::contains("overlap"), \(o) o > 0))
+
+            return(res)
 
           }
-
-          ### pres ----
-
-          if(!is.null(y) & !is.null(p)) {
-
-            pres_overlap <- y %>%
-              sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
-              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                else sf::st_transform(crs = sf::st_crs(., z[[1]]))
-              } %>%
-              sf::st_join(poly %>%
-                            {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
-                          , left = FALSE
-              )
-
-          } else {
-
-            pres_overlap <- tibble::tibble()
-
-          }
-
-          res <- tibble::tibble(subspecies = x
-                                , poly = idp
-                                , pres_overlap = nrow(pres_overlap)
-                                , poly_overlap = nrow(poly_overlap)
           ) |>
-            dplyr::mutate(overlap = dplyr::if_any(tidyr::contains("overlap"), \(o) o > 0))
+            dplyr::bind_rows()
 
-          return(res)
+          return(overlap)
 
         }
         ) |>
           dplyr::bind_rows()
 
-        return(overlap)
+      } else {
+
+        overlaps <- tibble::tibble(poly = names(overlap_prep$poly[[1]])
+                                   , subspecies = unique(overlap_prep$subspecies)
+                                   , overlap = FALSE
+        )
 
       }
-      ) |>
-        dplyr::bind_rows()
 
       # update binomials ----
 
@@ -352,7 +371,7 @@ bi_to_tri <- function(presences
         ) |>
         dplyr::rename(use_poly = poly) |>
         dplyr::left_join(overlap_prep) |>
-        dplyr::select(-other_pres)
+        dplyr::select(-tidyr::any_of("other_pres"))
 
       ## polygons ----
 
