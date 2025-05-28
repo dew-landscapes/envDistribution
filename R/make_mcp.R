@@ -67,7 +67,7 @@
 
       }
 
-      if(isTRUE(nrow(res)>0)) sfarrow::st_write_parquet(res, out_file) else res <- NA
+      if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
 
     } else {
 
