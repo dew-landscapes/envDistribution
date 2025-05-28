@@ -257,15 +257,15 @@ bi_to_tri <- function(species
         } %>%
         {if(exists("tri_dist")) dplyr::left_join(., tri_dist |>
                                                    tidyr::nest(.by = subspecies, dist = tidyr::everything())
-                                                 , by = subspecies
+                                                 , by = "subspecies"
         ) else .} %>%
         {if(exists("tri_mcp")) dplyr::left_join(., tri_mcp |>
                                                   tidyr::nest(.by = subspecies, mcp = tidyr::everything())
-                                                , by = subspecies
+                                                , by = "subspecies"
         ) else .} %>%
         {if(exists("tri_clust")) dplyr::left_join(., tri_clust |>
                                                     tidyr::nest(.by = subspecies, clust = tidyr::everything())
-                                                  , by = subspecies
+                                                  , by = "subspecies"
         ) else .} |>
         tidyr::pivot_longer(cols = tidyr::any_of(c("dist", "mcp", "clust")), values_to = "poly") %>%
         dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
@@ -366,7 +366,7 @@ bi_to_tri <- function(species
                            dplyr::filter(subspecies %in% overlaps$subspecies)
         ) |>
         dplyr::rename(use_poly = poly) |>
-        dplyr::left_join(overlap_prep, by = subspecies) |>
+        dplyr::left_join(overlap_prep, by = "subspecies") |>
         dplyr::select(-tidyr::any_of("other_pres"))
 
       ## polygons ----
