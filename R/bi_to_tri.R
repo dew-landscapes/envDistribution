@@ -94,7 +94,7 @@ bi_to_tri <- function(species
             sf::st_make_valid() |>
             dplyr::mutate(subspecies = x
                           , poly = "dist"
-                          ) |>
+            ) |>
             sf::st_buffer(buf)
 
         }
@@ -136,7 +136,7 @@ bi_to_tri <- function(species
             ) |>
               dplyr::mutate(subspecies = y
                             , poly = "mcp"
-                            ) |>
+              ) |>
               sf::st_buffer(buf)
 
           }
@@ -162,7 +162,7 @@ bi_to_tri <- function(species
               sf::st_make_valid() |>
               dplyr::mutate(subspecies = x
                             , poly = "mcp"
-                            ) |>
+              ) |>
               sf::st_buffer(buf)
 
           }
@@ -239,9 +239,8 @@ bi_to_tri <- function(species
 
     }
 
-    # overlaps ----
+    ## all poly ----
 
-    # find polygons so that don't continue if only tri_pres and no polygons
     polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust")) |>
       purrr::discard(\(x) nrow(x) == 0) |>
       purrr::map(\(x) {
@@ -257,299 +256,56 @@ bi_to_tri <- function(species
     # run if polys exist
     if(nrow(polys)) {
 
-      ## prep ----
-      ### pres ----
-      pres_prep <- mget(ls(pattern = "^tri_")) |>
-        purrr::map(\(x) if(is(x, "sf")) sf::st_set_geometry(x, NULL)) |>
-        dplyr::bind_rows() |>
-        dplyr::distinct(subspecies) %>%
-        {if(nrow(tri_pres) & nrow(.) > 1) dplyr::pull(., subspecies) |>
-            purrr::set_names() %>%
-            purrr::map(\(x) {
-
-              other_pres <- tri_pres |>
-                dplyr::filter(subspecies != x) |>
-                dplyr::select(-subspecies)
-
-            }
-            ) %>%
-            purrr::list_rbind(names_to = "subspecies") |>
-            tidyr::nest(.by = subspecies, other_pres = tidyr::all_of(c(pres_x, pres_y)))
-          else .
-        } %>%
-        {if(!"other_pres" %in% names(.)) dplyr::mutate(., other_pres = NA) else .}
-
-      ### poly ----
-      poly_prep <- polys |>
-        purrr::map(\(x) sf::st_set_geometry(x, NULL)) |>
-        dplyr::bind_rows() |>
-        dplyr::distinct(subspecies) |>
-        dplyr::mutate(poly = purrr::map(subspecies, \(s) {
-
-          polys %>%
-            purrr::set_names(stringr::str_replace(names(.), "tri_", "")) |>
-            purrr::imap(\(p, idp) {
-
-              p |>
-                dplyr::filter(subspecies == s) |>
-                dplyr::select(-subspecies) %>%
-                {if(nrow(.)) . else NULL}
-
-            }
-            )
-        }
-        )
-        , other_poly = purrr::map(subspecies, \(s) {
-
-          polys %>%
-            purrr::set_names(stringr::str_replace(names(.), "tri_", "")) |>
-            purrr::imap(\(p, idp) {
-
-              p |>
-                dplyr::filter(subspecies != s) %>%
-                {if(nrow(.)) . else NULL}
-
-            }
-            )
-        }
-        )
-        )
-
-      ### combined ----
-      overlap_prep <- pres_prep |>
-        dplyr::left_join(poly_prep, by = "subspecies") |>
-        dplyr::relocate(poly, .after = subspecies)
-
-      ## overlap ----
-
-      if(nrow(overlap_prep)) {
-
-        overlaps <- overlap_prep |>
-          purrr::pmap(\(subspecies, poly, other_pres, other_poly) {
-
-            overlap <- purrr::imap(poly, \(p, idp) {
-
-              ### poly ----
-
-              if(!is.null(p)) {
-
-                poly_overlap <- other_poly |>
-                  purrr::map(\(x) {
-                    if(!is.null(use_crs)) { sf::st_transform(x, crs = use_crs)
-                    } else sf::st_transform(x, crs = sf::st_crs(p))
-                  }
-                  ) |>
-                  dplyr::bind_rows() |>
-                  sf::st_join(p %>%
-                                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
-                              , left = FALSE
-                  ) %>%
-                  nrow(.)
-
-              } else {
-
-                poly_overlap <- NA
-
-              }
-
-              ### pres ----
-
-              if(all(!is.null(other_pres), !is.na(other_pres), !is.null(p))) {
-
-                pres_overlap <- other_pres %>%
-                  sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
-                  {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                    else sf::st_transform(crs = sf::st_crs(., p))
-                  } %>%
-                  sf::st_join(p %>%
-                                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
-                              , left = FALSE
-                  ) %>%
-                  nrow(.)
-
-              } else {
-
-                pres_overlap <- NA
-
-              }
-
-              res <- tibble::tibble(subspecies = x
-                                    , poly = idp
-                                    , pres_overlap = pres_overlap
-                                    , poly_overlap = poly_overlap
-              ) |>
-                dplyr::mutate(overlap = dplyr::if_any(tidyr::contains("overlap"), \(o) o > 0))
-
-              return(res)
-
-            }
-            ) |>
-              dplyr::bind_rows()
-
-            return(overlap)
-
-          }
-          ) |>
-          dplyr::bind_rows()
-
-      } else {
-
-        overlaps <- tibble::tibble(poly = names(overlap_prep$poly[[1]])
-                                   , subspecies = unique(overlap_prep$subspecies)
-                                   , overlap = FALSE
-        )
-
-      }
-
       # update binomials ----
+      ## new names ----
+      new_names <- bi_pres %>%
+        sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
+        {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+          else sf::st_transform(crs = sf::st_crs(., polys))
+        } |>
+        sf::st_join(polys, left = FALSE) |>
+        sf::st_set_geometry(NULL) |>
+        dplyr::group_by(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) |>
+        dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
+        dplyr::ungroup() |>
+        dplyr::filter(!grepl(",", subspecies)) |>
+        dplyr::mutate(bi_to_tri = TRUE) |>
+        dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
+        dplyr::bind_rows(tri_pres)
 
-      ## prep ----
+      ## checks ----
 
-      update_prep <- overlaps |>
-        dplyr::filter(!overlap) |>
-        dplyr::group_by(subspecies) |>
-        dplyr::summarise(poly = list(poly)) |>
-        dplyr::ungroup() %>%
-        dplyr::bind_rows(overrides |>
-                           dplyr::filter(subspecies %in% overlaps$subspecies)
-        ) |>
-        dplyr::rename(use_poly = poly) |>
-        dplyr::left_join(overlap_prep, by = "subspecies") |>
-        dplyr::select(-tidyr::any_of("other_pres"))
+      if(FALSE) {
 
-      ## polygons ----
+        library(tmap)
+        tmap_mode("view")
 
-      if(nrow(update_prep)) {
+        test <- bi_pres %>%
+          dplyr::left_join(new_names) |>
+          sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
 
-        update_poly <- purrr::pmap(list(update_prep$subspecies
-                                        , update_prep$use_poly
-                                        , update_prep$poly
-        )
-        , \(x,y,z) {
+        tm_shape(test)+tm_dots("subspecies")+tm_shape(polys)+tm_borders("subspecies")
 
-          run <- all(purrr::map_lgl(unname(z[y]), \(r) !is.null(r)))
-
-          if(run) {
-
-            # construct update poly from all relevant polys
-            tri_poly <- z[y] %>%
-              purrr::map(\(p) {
-
-                if(!is.null(p)) {
-
-                  p |>
-                    dplyr::filter(subspecies == x) %>%
-                    {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                      else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
-                    }
-
-                } else {
-
-                  dplyr::slice(polys[[1]], 0) %>%
-                    {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                      else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
-                    }
-
-                }
-
-              }
-              ) |>
-              dplyr::bind_rows() |>
-              dplyr::summarise() |>
-              dplyr::mutate(subspecies = x)
-
-          } else {
-
-            tri_poly <- dplyr::slice(polys[[1]], 0) %>%
-              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                else sf::st_transform(., crs = sf::st_crs(polys[[1]]))
-              }
-
-          }
-
-          return(tri_poly)
-
-        }
-        ) |>
-          dplyr::bind_rows()
-
-        ## update names ----
-        # done separately to above to enable easy mapping of polygons used vs updated occurrences
-
-        if(nrow(update_poly)) {
-
-          update_names <- update_poly |>
-            tidyr::nest(.by = subspecies, poly = c(subspecies, geometry)) |>
-            dplyr::pull(poly) |>
-            purrr::map(\(p) {
-
-              new_names <- bi_pres %>%
-                sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE) %>%
-                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                  else sf::st_transform(crs = sf::st_crs(., p))
-                } |>
-                sf::st_join(p, left = FALSE) |>
-                sf::st_set_geometry(NULL) |>
-                dplyr::mutate(bi_to_tri = TRUE)
-
-              return(new_names)
-
-            }
-
-            ) |>
-            dplyr::bind_rows() |>
-            dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
-            dplyr::bind_rows(tri_pres)
-
-          ## checks ----
-
-          if(FALSE) {
-
-            library(tmap)
-            tmap_mode("view")
-
-            test <- bi_pres %>%
-              dplyr::left_join(update_names) |>
-              sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
-
-            tm_shape(test)+tm_dots("subspecies")+tm_shape(update_poly)+tm_borders("subspecies")
-
-            test |>
-              sf::st_set_geometry(NULL) |>
-              dplyr::count(subspecies) |>
-              dplyr::mutate(pc = n/nrow(test)*100)
-
-          }
-
-          ## summary ----
-
-          bi_updated <- update_names |>
-            dplyr::filter(bi_to_tri)
-
-          pc <- nrow(bi_updated)/nrow(bi_pres)*100
-
-          message(species, ": ", nrow(bi_updated), " of ", nrow(bi_pres)
-                  ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
-
-        } else {
-
-          update_names <- all_pres
-
-          message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions, overlapping cluster polygons and unable to construct an mcp due to < 3 occurrences")
-
-        }
-
-      } else {
-
-        update_names <- all_pres
-
-        message(species, ": ", "No binomials updated to trinomial due to overlapping trinomial distributions")
+        test |>
+          sf::st_set_geometry(NULL) |>
+          dplyr::count(subspecies) |>
+          dplyr::mutate(pc = n/nrow(test)*100)
 
       }
+
+      ## summary ----
+
+      bi_updated <- new_names |>
+        dplyr::filter(bi_to_tri)
+
+      pc <- nrow(bi_updated)/nrow(bi_pres)*100
+
+      message(species, ": ", nrow(bi_updated), " of ", nrow(bi_pres)
+              ," binomial occurrences updated to trinomial (", round(pc, 1), "%)")
 
     } else {
 
-      update_names <- all_pres
+      new_names <- all_pres
 
       message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions and unable to construct mcp or clust polygons due to < 3 occurrences")
 
@@ -557,7 +313,7 @@ bi_to_tri <- function(species
 
   } else {
 
-    update_names <- all_pres
+    new_names <- all_pres
 
     if(!nrow(bi_pres)) {
 
@@ -571,7 +327,7 @@ bi_to_tri <- function(species
 
   }
 
-  res <- update_names |>
+  res <- new_names |>
     dplyr::mutate(species = species) |>
     dplyr::relocate(species)
 
@@ -579,4 +335,5 @@ bi_to_tri <- function(species
 
   return(res)
 
+}
 }
