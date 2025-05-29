@@ -237,7 +237,9 @@ bi_to_tri <- function(species
     # run overlaps if polys exist
     if(length(polys)) {
 
-      overlap_prep <- mget(ls(pattern = "^tri_")) |>
+      ## prep ----
+      ### pres ----
+      pres_prep <- mget(ls(pattern = "^tri_")) |>
         purrr::map(\(x) if(is(x, "sf")) sf::st_set_geometry(x, NULL)) |>
         dplyr::bind_rows() |>
         dplyr::distinct(subspecies) %>%
@@ -255,94 +257,119 @@ bi_to_tri <- function(species
             tidyr::nest(.by = subspecies, other_pres = tidyr::all_of(c(pres_x, pres_y)))
           else .
         } %>%
-        {if(exists("tri_dist")) dplyr::left_join(., tri_dist |>
-                                                   tidyr::nest(.by = subspecies, dist = tidyr::everything())
-                                                 , by = "subspecies"
-        ) else .} %>%
-        {if(exists("tri_mcp")) dplyr::left_join(., tri_mcp |>
-                                                  tidyr::nest(.by = subspecies, mcp = tidyr::everything())
-                                                , by = "subspecies"
-        ) else .} %>%
-        {if(exists("tri_clust")) dplyr::left_join(., tri_clust |>
-                                                    tidyr::nest(.by = subspecies, clust = tidyr::everything())
-                                                  , by = "subspecies"
-        ) else .} |>
-        tidyr::pivot_longer(cols = tidyr::any_of(c("dist", "mcp", "clust")), values_to = "poly") %>%
-        dplyr::mutate(poly = dplyr::select(., name, poly) |> tibble::deframe()) |>
-        dplyr::group_by(dplyr::across(tidyr::any_of(c("subspecies", "other_pres")))) |>
-        dplyr::summarise(poly = list(poly)) |>
-        dplyr::ungroup() %>%
         {if(!"other_pres" %in% names(.)) dplyr::mutate(., other_pres = NA) else .}
+
+      ### poly ----
+      poly_prep <- polys |>
+        purrr::map(\(x) sf::st_set_geometry(x, NULL)) |>
+        dplyr::bind_rows() |>
+        dplyr::distinct(subspecies) |>
+        dplyr::mutate(poly = purrr::map(subspecies, \(s) {
+
+          polys %>%
+            purrr::set_names(stringr::str_replace(names(.), "tri_", "")) |>
+            purrr::imap(\(p, idp) {
+
+              p |>
+                dplyr::filter(subspecies == s) |>
+                dplyr::select(-subspecies) %>%
+                {if(nrow(.)) . else NULL}
+
+            }
+            )
+        }
+        )
+        , other_poly = purrr::map(subspecies, \(s) {
+
+          polys %>%
+            purrr::set_names(stringr::str_replace(names(.), "tri_", "")) |>
+            purrr::imap(\(p, idp) {
+
+              p |>
+                dplyr::filter(subspecies != s) %>%
+                {if(nrow(.)) . else NULL}
+
+            }
+            )
+        }
+        )
+        )
+
+      ### combined ----
+      overlap_prep <- pres_prep |>
+        dplyr::left_join(poly_prep, by = "subspecies") |>
+        dplyr::relocate(poly, .after = subspecies)
 
       ## overlap ----
 
       if(nrow(overlap_prep)) {
 
-        overlaps <- purrr::pmap(list(overlap_prep$subspecies
-                                     , overlap_prep$other_pres
-                                     , overlap_prep$poly
-        )
-        , \(x,y,z) {
+        overlaps <- overlap_prep |>
+          purrr::pmap(\(subspecies, poly, other_pres, other_poly) {
 
-          overlap <- purrr::imap(z, \(p, idp) {
+            overlap <- purrr::imap(poly, \(p, idp) {
 
-            ### poly ----
+              ### poly ----
 
-            if(!is.null(p)) {
+              if(!is.null(p)) {
 
-              poly <- p |>
-                dplyr::filter(subspecies == x) |>
-                dplyr::select(-subspecies)
+                poly_overlap <- other_poly |>
+                  purrr::map(\(x) {
+                    if(!is.null(use_crs)) { sf::st_transform(x, crs = use_crs)
+                    } else sf::st_transform(x, crs = sf::st_crs(p))
+                  }
+                  ) |>
+                  dplyr::bind_rows() |>
+                  sf::st_join(p %>%
+                                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
+                              , left = FALSE
+                  ) %>%
+                  nrow(.)
 
-              other_poly <- p |>
-                dplyr::filter(subspecies != x)
+              } else {
 
-              poly_overlap <- other_poly |>
-                sf::st_join(poly, left = FALSE)
+                poly_overlap <- NA
 
-            } else {
+              }
 
-              poly_overlap <- tibble::tibble()
+              ### pres ----
+
+              if(all(!is.null(other_pres), !is.na(other_pres), !is.null(p))) {
+
+                pres_overlap <- other_pres %>%
+                  sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
+                  {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
+                    else sf::st_transform(crs = sf::st_crs(., p))
+                  } %>%
+                  sf::st_join(p %>%
+                                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
+                              , left = FALSE
+                  ) %>%
+                  nrow(.)
+
+              } else {
+
+                pres_overlap <- NA
+
+              }
+
+              res <- tibble::tibble(subspecies = x
+                                    , poly = idp
+                                    , pres_overlap = pres_overlap
+                                    , poly_overlap = poly_overlap
+              ) |>
+                dplyr::mutate(overlap = dplyr::if_any(tidyr::contains("overlap"), \(o) o > 0))
+
+              return(res)
 
             }
-
-            ### pres ----
-
-            if(all(!is.null(y), !is.na(y), !is.null(p))) {
-
-              pres_overlap <- y %>%
-                sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
-                {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
-                  else sf::st_transform(crs = sf::st_crs(., z[[1]]))
-                } %>%
-                sf::st_join(poly %>%
-                              {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
-                            , left = FALSE
-                )
-
-            } else {
-
-              pres_overlap <- tibble::tibble()
-
-            }
-
-            res <- tibble::tibble(subspecies = x
-                                  , poly = idp
-                                  , pres_overlap = nrow(pres_overlap)
-                                  , poly_overlap = nrow(poly_overlap)
             ) |>
-              dplyr::mutate(overlap = dplyr::if_any(tidyr::contains("overlap"), \(o) o > 0))
+              dplyr::bind_rows()
 
-            return(res)
+            return(overlap)
 
           }
           ) |>
-            dplyr::bind_rows()
-
-          return(overlap)
-
-        }
-        ) |>
           dplyr::bind_rows()
 
       } else {
