@@ -242,16 +242,16 @@ bi_to_tri <- function(species
     ## all poly ----
 
     polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust")) |>
-      purrr::discard(\(x) nrow(x) == 0) |>
+      purrr::discard(\(x) nrow(x) == 0) %>%
       purrr::map(\(x) {
         if(!is.null(use_crs)) { sf::st_transform(x, crs = use_crs)
         } else sf::st_transform(x, crs = sf::st_crs(polys))
       }
       ) |>
-      dplyr::bind_rows() |>
-      dplyr::group_by(subspecies) |>
+      dplyr::bind_rows() %>%
+      {if(nrow(.)) dplyr::group_by(., subspecies) |>
       dplyr::summarise(poly = stringr::str_flatten_comma(sort(unique(poly)))) |>
-      sf::st_make_valid()
+      sf::st_make_valid() else .}
 
     # run if polys exist
     if(nrow(polys)) {
