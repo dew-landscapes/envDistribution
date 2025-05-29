@@ -92,7 +92,9 @@ bi_to_tri <- function(species
             dplyr::bind_rows() |>
             dplyr::summarise() |>
             sf::st_make_valid() |>
-            dplyr::mutate(subspecies = x) |>
+            dplyr::mutate(subspecies = x
+                          , poly = "dist"
+                          ) |>
             sf::st_buffer(buf)
 
         }
@@ -132,7 +134,9 @@ bi_to_tri <- function(species
                             , buf = buf
                             , clip = NULL
             ) |>
-              dplyr::mutate(subspecies = y) |>
+              dplyr::mutate(subspecies = y
+                            , poly = "mcp"
+                            ) |>
               sf::st_buffer(buf)
 
           }
@@ -156,7 +160,9 @@ bi_to_tri <- function(species
               dplyr::bind_rows() |>
               dplyr::summarise() |>
               sf::st_make_valid() |>
-              dplyr::mutate(subspecies = x) |>
+              dplyr::mutate(subspecies = x
+                            , poly = "mcp"
+                            ) |>
               sf::st_buffer(buf)
 
           }
@@ -220,9 +226,14 @@ bi_to_tri <- function(species
                         sf::st_transform(., crs = use_crs)
                       , left = FALSE
           ) |>
+          dplyr::group_by(clust) |>
+          dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
+          sf::st_make_valid() |>
+          dplyr::filter(!grepl(",", subspecies)) |>
           dplyr::group_by(subspecies) |>
           dplyr::summarise() |>
-          sf::st_make_valid()
+          sf::st_make_valid() |>
+          dplyr::mutate(poly = "clust")
 
       }
 
@@ -232,10 +243,19 @@ bi_to_tri <- function(species
 
     # find polygons so that don't continue if only tri_pres and no polygons
     polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust")) |>
-      purrr::discard(\(x) nrow(x) == 0)
+      purrr::discard(\(x) nrow(x) == 0) |>
+      purrr::map(\(x) {
+        if(!is.null(use_crs)) { sf::st_transform(x, crs = use_crs)
+        } else sf::st_transform(x, crs = sf::st_crs(polys))
+      }
+      ) |>
+      dplyr::bind_rows() |>
+      dplyr::group_by(subspecies) |>
+      dplyr::summarise(poly = stringr::str_flatten_comma(sort(unique(poly)))) |>
+      sf::st_make_valid()
 
-    # run overlaps if polys exist
-    if(length(polys)) {
+    # run if polys exist
+    if(nrow(polys)) {
 
       ## prep ----
       ### pres ----
