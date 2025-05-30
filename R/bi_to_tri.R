@@ -24,20 +24,22 @@
 #' @param buf Integer. Distance in metres to buffer the distribution.
 #' @param clust_dist Integer. Distance to base clusters on in clust function if `use_clust` = TRUE.
 #' Needs to be in the units of the projected crs supplied in `use_crs`, e.g. metres.
-#' @param overrides Data frame containing subspecies and poly columns indicating any subspecies to
-#' override the overlap checking and force binomials to be updated within the polygon type
-#' specified in 'poly', where 'poly' is a vector of values containing any of 'dist',
-#' 'mcp' or 'clust' for distribution, minimum convex polygon or cluster respectively.
+#' @param overrides Character vector containing any trinomials that should override the overlap checking
+#' and force binomials within their distribution polygons to be updated to that trinomial even if the
+#' binomials overlap distribution polygons of other trinomials.
+#' @param skip_bi Character vector of any binomials (species) to be skipped and not have binomials
+#' updated to trinomial.
+#' @param skip_tri Character vector of any trinomials (subspecies, varieties, forms etc) to be skipped
+#' and not have binomials updated to these trinomials.
 #'
 #' @details
-#' Will only update binomial occurrence records that fall within a distribution polygon to trinomial if no other
-#' trinomial presences or distributions for a species are found intersecting the distribution polygon.
+#' Binomial occurrence records won't be updated to trinomial if they fall within multiple trinomial distributions.
 #' This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
 #' Distribution refers generally to all the polygons used to represent distributions,
 #' i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.
 #'
-#' @return Data frame equivalent to `presences` with 'subspecies' updated
-#' for taxa where distributions were found and did not overlap with multiple trinomials in presence or distributions,
+#' @return Data frame equivalent to `presences` with 'subspecies' updated for taxa where
+#' distributions were found and did not overlap with multiple trinomials distributions,
 #' and an additional 'bi_to_tri' column indicating which records were updated.
 #'
 #' @export
@@ -55,9 +57,9 @@ bi_to_tri <- function(species
                       , use_crs = NULL
                       , buf = 0
                       , clust_dist = 50000
-                      , overrides = tibble::tribble(~subspecies, ~ poly,
-                                                    "Stipiturus malachurus intermedius", c("dist", "mcp")
-                      )
+                      , overrides = c("Stipiturus malachurus intermedius")
+                      , skip_bi = NULL
+                      , skip_tri = NULL
 ) {
 
   # presences ----
@@ -72,7 +74,7 @@ bi_to_tri <- function(species
   tri_pres <- all_pres %>%
     dplyr::filter(!is.na(subspecies))
 
-  if(nrow(bi_pres) & any(nrow(tri_pres), !is.null(distrib_files))) {
+  if(nrow(bi_pres) & any(nrow(tri_pres), !is.null(distrib_files)) & !species %in% skip_bi) {
 
     # polygons ----
 
@@ -178,24 +180,37 @@ bi_to_tri <- function(species
 
     if(all(use_clust, nrow(tri_pres), nrow(bi_pres))) {
 
-      clust_prep <- all_pres %>%
-        dplyr::select(-subspecies) %>%
-        dplyr::rename(tidyr::any_of(c("long" = "cell_long", "lat" = "cell_lat"))) %>% # to overcome odd error of pres_x and pres_y not being accepted in make_clust below
-        sf::st_as_sf(coords = c("long", "lat"), crs = pres_crs, remove = FALSE) %>%
-        sf::st_transform(crs = use_crs) %>%
-        dplyr::mutate(X = sf::st_coordinates(.)[,1]
-                      , Y = sf::st_coordinates(.)[,2]
-        ) %>%
-        sf::st_set_geometry(NULL) %>%
-        dplyr::mutate(clust = clusts(presence = .
-                                     , h = 50000
-                                     , pres_x = "X"
-                                     , pres_y = "Y"
-        )
-        ) |>
-        dplyr::add_count(clust) |>
-        dplyr::filter(n >= 3) |>
-        tidyr::nest(.by = clust, data = c(long, lat))
+      # Note: error in `hclust()`: ! size cannot be NA nor exceed 65536
+      # may need to have a catch for this that tries a larger h value if it errors or just skip
+
+      clust_prep <- tryCatch(
+        {
+          all_pres %>%
+            dplyr::select(-subspecies) %>%
+            dplyr::rename(tidyr::any_of(c("long" = "cell_long", "lat" = "cell_lat"))) %>% # to overcome odd error of pres_x and pres_y not being accepted in make_clust below
+            sf::st_as_sf(coords = c("long", "lat"), crs = pres_crs, remove = FALSE) %>%
+            sf::st_transform(crs = use_crs) %>%
+            dplyr::mutate(X = sf::st_coordinates(.)[,1]
+                          , Y = sf::st_coordinates(.)[,2]
+            ) %>%
+            sf::st_set_geometry(NULL) %>%
+            dplyr::mutate(clust = clusts(presence = .
+                                         , h = 50000
+                                         , pres_x = "X"
+                                         , pres_y = "Y"
+            )
+            ) |>
+            dplyr::add_count(clust) |>
+            dplyr::filter(n >= 3) |>
+            tidyr::nest(.by = clust, data = c(long, lat))
+
+        },
+        error = function(e) {
+
+          tibble::tibble()
+
+        }
+      )
 
       if(nrow(clust_prep)) {
 
@@ -239,10 +254,9 @@ bi_to_tri <- function(species
 
     }
 
-    ## all poly ----
+    ## all ----
 
     polys <- mget(ls(pattern = "^tri_dist|^tri_mcp|^tri_clust")) |>
-      purrr::discard(\(x) nrow(x) == 0) %>%
       purrr::map(\(x) {
         if(!is.null(use_crs)) { sf::st_transform(x, crs = use_crs)
         } else sf::st_transform(x, crs = sf::st_crs(polys))
@@ -250,8 +264,8 @@ bi_to_tri <- function(species
       ) |>
       dplyr::bind_rows() %>%
       {if(nrow(.)) dplyr::group_by(., subspecies) |>
-      dplyr::summarise(poly = stringr::str_flatten_comma(sort(unique(poly)))) |>
-      sf::st_make_valid() else .}
+          dplyr::summarise(poly = stringr::str_flatten_comma(sort(unique(poly)))) |>
+          sf::st_make_valid() else .}
 
     # run if polys exist
     if(nrow(polys)) {
@@ -268,8 +282,21 @@ bi_to_tri <- function(species
         dplyr::group_by(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) |>
         dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
         dplyr::ungroup() |>
+        dplyr::mutate(subspecies = ifelse(grepl(paste0(overrides$subspecies, collapse = "|")
+                                                , subspecies) & grepl(",", subspecies)
+                                          , stringr::str_extract(subspecies
+                                                                 , paste0(overrides$subspecies, collapse = "|")
+                                          )
+                                          , subspecies
+        )
+        ) |>
         dplyr::filter(!grepl(",", subspecies)) |>
-        dplyr::mutate(bi_to_tri = TRUE) |>
+        dplyr::mutate(subspecies = ifelse(subspecies %in% skip_tri
+                                          , NA
+                                          , subspecies
+        )
+        , bi_to_tri = TRUE
+        ) |>
         dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
         dplyr::bind_rows(tri_pres)
 
@@ -315,7 +342,12 @@ bi_to_tri <- function(species
 
     new_names <- all_pres
 
-    if(!nrow(bi_pres)) {
+
+    if(species %in% skip_bi) {
+
+      message(species, ": ", "No binomials updated to trinomial as skip specified")
+
+    } else if(!nrow(bi_pres)) {
 
       message(species, ": ", "No binomials updated to trinomial due to no binomial occurrences")
 
