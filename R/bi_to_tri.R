@@ -284,7 +284,7 @@ bi_to_tri <- function(species
                                          poly <- polys |>
                                            dplyr::filter(subspecies == x)
 
-                                         if(nrow(poly)) {
+                                         if(nrow(poly) > 1) {
 
                                            other_poly <- polys |>
                                              dplyr::filter(subspecies != x) |>
