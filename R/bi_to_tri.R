@@ -325,26 +325,28 @@ bi_to_tri <- function(species
           else sf::st_transform(crs = sf::st_crs(., polys))
         } |>
         sf::st_join(polys, left = FALSE) |>
-        sf::st_set_geometry(NULL) |>
-        dplyr::group_by(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) |>
-        dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
-        dplyr::ungroup() |>
-        dplyr::left_join(overlaps) |>
-        dplyr::mutate(subspecies = dplyr::case_when(grepl(paste0(overrides, collapse = "|")
-                                                          , subspecies) & grepl(",", subspecies)
-                                                    ~ stringr::str_extract(subspecies
-                                                                           , paste0(overrides, collapse = "|")
-                                                    )
-                                                    , pc_overlap > overlap_thres ~ NA
-                                                    , subspecies %in% skip_tri ~ NA
-                                                    , .default = subspecies
-        )
-        ) |>
-        dplyr::filter(!grepl(",", subspecies)
-                      , !is.na(subspecies)
-                      ) |>
-        dplyr::mutate(bi_to_tri = TRUE) |>
-        dplyr::select(subspecies, cell_long, cell_lat, bi_to_tri)
+        sf::st_set_geometry(NULL) %>%
+        {if(nrow(.)) dplyr::group_by(., !!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) |>
+            dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
+            dplyr::ungroup() |>
+            dplyr::left_join(overlaps) |>
+            dplyr::mutate(subspecies = dplyr::case_when(grepl(paste0(overrides, collapse = "|")
+                                                              , subspecies) & grepl(",", subspecies)
+                                                        ~ stringr::str_extract(subspecies
+                                                                               , paste0(overrides, collapse = "|")
+                                                        )
+                                                        , pc_overlap > overlap_thres ~ NA
+                                                        , subspecies %in% skip_tri ~ NA
+                                                        , .default = subspecies
+            )
+            ) |>
+            dplyr::filter(!grepl(",", subspecies)
+                          , !is.na(subspecies)
+            ) |>
+            dplyr::mutate(bi_to_tri = TRUE)
+          else dplyr::mutate(., bi_to_tri = NA)
+        } |>
+        dplyr::select(tidyr::any_of(c("subspecies", "cell_long", "cell_lat", "bi_to_tri")))
 
       res <- new_names |>
         dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
