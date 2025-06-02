@@ -24,6 +24,9 @@
 #' @param buf Integer. Distance in metres to buffer the distribution.
 #' @param clust_dist Integer. Distance to base clusters on in clust function if `use_clust` = TRUE.
 #' Needs to be in the units of the projected crs supplied in `use_crs`, e.g. metres.
+#' @param overlap_thres Integer. Percent threshold corresponding to the area of overlap between distributions
+#' at which to not update binomial occurrences to trinomial, i.e. with a threshold of 50%, if a trinomial
+#' distribution overlaps any others by more than 50% then no binomials will be updated to that trinomial.
 #' @param overrides Character vector containing any trinomials that should override the overlap checking
 #' and force binomials within their distribution polygons to be updated to that trinomial even if the
 #' binomials overlap distribution polygons of other trinomials.
@@ -57,7 +60,8 @@ bi_to_tri <- function(species
                       , use_crs = NULL
                       , buf = 0
                       , clust_dist = 50000
-                      , overrides = c("Stipiturus malachurus intermedius")
+                      , overlap_thres = 50
+                      , overrides = NULL
                       , skip_bi = NULL
                       , skip_tri = NULL
 ) {
@@ -267,8 +271,51 @@ bi_to_tri <- function(species
           dplyr::summarise(poly = stringr::str_flatten_comma(sort(unique(poly)))) |>
           sf::st_make_valid() else .}
 
+    ## overlaps ----
+
     # run if polys exist
     if(nrow(polys)) {
+
+      overlaps <- polys |>
+        dplyr::mutate(pc_overlap =
+                        purrr::map_dbl(subspecies
+                                       , \(x) {
+
+                                         poly <- polys |>
+                                           dplyr::filter(subspecies == x)
+
+                                         if(nrow(poly)) {
+
+                                           other_poly <- polys |>
+                                             dplyr::filter(subspecies != x) |>
+                                             dplyr::summarise() |>
+                                             sf::st_make_valid()
+
+                                           if(nrow(other_poly)) {
+
+                                             poly_area <- poly %>%
+                                               dplyr::mutate(area = as.numeric(sf::st_area(.))) |>
+                                               sf::st_set_geometry(NULL) |>
+                                               dplyr::pull(area)
+
+                                             overlap_area <- poly |>
+                                               sf::st_intersection(other_poly) |>
+                                               sf::st_make_valid() %>%
+                                               dplyr::mutate(area = as.numeric(sf::st_area(.))) |>
+                                               sf::st_set_geometry(NULL) |>
+                                               dplyr::pull(area) %>%
+                                               {if(length(.)) . else 0}
+
+                                             overlap_area/poly_area*100
+
+                                           } else 0
+
+                                         } else 0
+
+                                       }
+                        )
+        ) |>
+        sf::st_set_geometry(NULL)
 
       # update binomials ----
       ## new names ----
@@ -282,21 +329,24 @@ bi_to_tri <- function(species
         dplyr::group_by(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) |>
         dplyr::summarise(subspecies = stringr::str_flatten_comma(sort(unique(subspecies)))) |>
         dplyr::ungroup() |>
-        dplyr::mutate(subspecies = ifelse(grepl(paste0(overrides$subspecies, collapse = "|")
-                                                , subspecies) & grepl(",", subspecies)
-                                          , stringr::str_extract(subspecies
-                                                                 , paste0(overrides$subspecies, collapse = "|")
-                                          )
-                                          , subspecies
+        dplyr::left_join(overlaps) |>
+        dplyr::mutate(subspecies = dplyr::case_when(grepl(paste0(overrides, collapse = "|")
+                                                          , subspecies) & grepl(",", subspecies)
+                                                    ~ stringr::str_extract(subspecies
+                                                                           , paste0(overrides, collapse = "|")
+                                                    )
+                                                    , pc_overlap > overlap_thres ~ NA
+                                                    , subspecies %in% skip_tri ~ NA
+                                                    , .default = subspecies
         )
         ) |>
-        dplyr::filter(!grepl(",", subspecies)) |>
-        dplyr::mutate(subspecies = ifelse(subspecies %in% skip_tri
-                                          , NA
-                                          , subspecies
-        )
-        , bi_to_tri = TRUE
-        ) |>
+        dplyr::filter(!grepl(",", subspecies)
+                      , !is.na(subspecies)
+                      ) |>
+        dplyr::mutate(bi_to_tri = TRUE) |>
+        dplyr::select(subspecies, cell_long, cell_lat, bi_to_tri)
+
+      res <- new_names |>
         dplyr::full_join(bi_pres, by = c(pres_x, pres_y)) |>
         dplyr::bind_rows(tri_pres)
 
@@ -311,7 +361,7 @@ bi_to_tri <- function(species
           dplyr::left_join(new_names) |>
           sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs, remove = FALSE)
 
-        tm_shape(test)+tm_dots("subspecies")+tm_shape(polys)+tm_borders("subspecies")
+        tm_shape(test)+tm_dots("subspecies")+tm_shape(polys)+tm_borders("subspecies")+tm_scale_bar()
 
         test |>
           sf::st_set_geometry(NULL) |>
@@ -322,7 +372,7 @@ bi_to_tri <- function(species
 
       ## summary ----
 
-      bi_updated <- new_names |>
+      bi_updated <- res |>
         dplyr::filter(bi_to_tri)
 
       pc <- nrow(bi_updated)/nrow(bi_pres)*100
@@ -332,7 +382,7 @@ bi_to_tri <- function(species
 
     } else {
 
-      new_names <- all_pres
+      res <- all_pres
 
       message(species, ": ", "No binomials updated to trinomial due to no trinomial distributions and unable to construct mcp or clust polygons due to < 3 occurrences")
 
@@ -340,7 +390,7 @@ bi_to_tri <- function(species
 
   } else {
 
-    new_names <- all_pres
+    res <- all_pres
 
 
     if(species %in% skip_bi) {
@@ -359,7 +409,7 @@ bi_to_tri <- function(species
 
   }
 
-  res <- new_names |>
+  res <- res |>
     dplyr::mutate(species = species) |>
     dplyr::relocate(species)
 
