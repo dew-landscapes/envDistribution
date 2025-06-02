@@ -17,8 +17,10 @@ bi_to_tri(
   use_crs = NULL,
   buf = 0,
   clust_dist = 50000,
-  overrides = tibble::tribble(~subspecies, ~poly, "Stipiturus malachurus intermedius",
-    c("dist", "mcp"))
+  overlap_thres = 50,
+  overrides = NULL,
+  skip_bi = NULL,
+  skip_tri = NULL
 )
 }
 \arguments{
@@ -54,24 +56,32 @@ can sometimes help with spherical geometry issues. If NULL, the crs of the distr
 \item{clust_dist}{Integer. Distance to base clusters on in clust function if \code{use_clust} = TRUE.
 Needs to be in the units of the projected crs supplied in \code{use_crs}, e.g. metres.}
 
-\item{overrides}{Data frame containing subspecies and poly columns indicating any subspecies to
-override the overlap checking and force binomials to be updated within the polygon type
-specified in 'poly', where 'poly' is a vector of values containing any of 'dist',
-'mcp' or 'clust' for distribution, minimum convex polygon or cluster respectively.}
+\item{overlap_thres}{Integer. Percent threshold corresponding to the area of overlap between distributions
+at which to not update binomial occurrences to trinomial, i.e. with a threshold of 50\%, if a trinomial
+distribution overlaps any others by more than 50\% then no binomials will be updated to that trinomial.}
+
+\item{overrides}{Character vector containing any trinomials that should override the overlap checking
+and force binomials within their distribution polygons to be updated to that trinomial even if the
+binomials overlap distribution polygons of other trinomials.}
+
+\item{skip_bi}{Character vector of any binomials (species) to be skipped and not have binomials
+updated to trinomial.}
+
+\item{skip_tri}{Character vector of any trinomials (subspecies, varieties, forms etc) to be skipped
+and not have binomials updated to these trinomials.}
 
 \item{in_crs}{Integer. Coordinate reference system (epsg code) for coordinates in \code{presences}.}
 }
 \value{
-Data frame equivalent to \code{presences} with 'subspecies' updated
-for taxa where distributions were found and did not overlap with multiple trinomials in presence or distributions,
+Data frame equivalent to \code{presences} with 'subspecies' updated for taxa where
+distributions were found and did not overlap with multiple trinomials distributions,
 and an additional 'bi_to_tri' column indicating which records were updated.
 }
 \description{
 Convert binomial (species) level occurrences to trinomial based on distributions.
 }
 \details{
-Will only update binomial occurrence records that fall within a distribution polygon to trinomial if no other
-trinomial presences or distributions for a species are found intersecting the distribution polygon.
+Binomial occurrence records won't be updated to trinomial if they fall within multiple trinomial distributions.
 This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
 Distribution refers generally to all the polygons used to represent distributions,
 i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.

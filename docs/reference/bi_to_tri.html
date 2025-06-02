@@ -66,8 +66,10 @@
 <span>  use_crs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  clust_dist <span class="op">=</span> <span class="fl">50000</span>,</span>
-<span>  overrides <span class="op">=</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span><span class="op">~</span><span class="va">subspecies</span>, <span class="op">~</span><span class="va">poly</span>, <span class="st">"Stipiturus malachurus intermedius"</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dist"</span>, <span class="st">"mcp"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  overlap_thres <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  overrides <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  skip_bi <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  skip_tri <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -125,11 +127,26 @@ can sometimes help with spherical geometry issues. If NULL, the crs of the distr
 Needs to be in the units of the projected crs supplied in <code>use_crs</code>, e.g. metres.</p></dd>
 
 
+<dt>overlap_thres</dt>
+<dd><p>Integer. Percent threshold corresponding to the area of overlap between distributions
+at which to not update binomial occurrences to trinomial, i.e. with a threshold of 50%, if a trinomial
+distribution overlaps any others by more than 50% then no binomials will be updated to that trinomial.</p></dd>
+
+
 <dt>overrides</dt>
-<dd><p>Data frame containing subspecies and poly columns indicating any subspecies to
-override the overlap checking and force binomials to be updated within the polygon type
-specified in 'poly', where 'poly' is a vector of values containing any of 'dist',
-'mcp' or 'clust' for distribution, minimum convex polygon or cluster respectively.</p></dd>
+<dd><p>Character vector containing any trinomials that should override the overlap checking
+and force binomials within their distribution polygons to be updated to that trinomial even if the
+binomials overlap distribution polygons of other trinomials.</p></dd>
+
+
+<dt>skip_bi</dt>
+<dd><p>Character vector of any binomials (species) to be skipped and not have binomials
+updated to trinomial.</p></dd>
+
+
+<dt>skip_tri</dt>
+<dd><p>Character vector of any trinomials (subspecies, varieties, forms etc) to be skipped
+and not have binomials updated to these trinomials.</p></dd>
 
 
 <dt>in_crs</dt>
@@ -140,14 +157,13 @@ specified in 'poly', where 'poly' is a vector of values containing any of 'dist'
     <h2>Value</h2>
     
 
-<p>Data frame equivalent to <code>presences</code> with 'subspecies' updated
-for taxa where distributions were found and did not overlap with multiple trinomials in presence or distributions,
+<p>Data frame equivalent to <code>presences</code> with 'subspecies' updated for taxa where
+distributions were found and did not overlap with multiple trinomials distributions,
 and an additional 'bi_to_tri' column indicating which records were updated.</p>
     </div>
     <div id="details">
     <h2>Details</h2>
-    <p>Will only update binomial occurrence records that fall within a distribution polygon to trinomial if no other
-trinomial presences or distributions for a species are found intersecting the distribution polygon.
+    <p>Binomial occurrence records won't be updated to trinomial if they fall within multiple trinomial distributions.
 This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
 Distribution refers generally to all the polygons used to represent distributions,
 i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.</p>
