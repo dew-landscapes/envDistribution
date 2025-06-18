@@ -52,9 +52,11 @@ reg_taxa <- function(presence
   region_bound <- region_bound %>%
     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
 
+  pres <- presence %>%
+    dplyr::distinct(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y))
+
   # Distance of closest presence to region ----
-  pres_dist <- presence %>%
-    dplyr::distinct(!!rlang::ensym(pres_x), !!rlang::ensym(pres_y)) %>%
+  pres_dist <- pres %>%
     sf::st_as_sf(coords = c(pres_x, pres_y), crs = pres_crs) %>%
     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs)
       else sf::st_transform(crs = sf::st_crs(., region_bound))
@@ -102,9 +104,9 @@ reg_taxa <- function(presence
   }
 
   # Distance of MCP to region ----
-  if(use_mcp){
+  if(use_mcp & nrow(pres) >= 3) {
 
-    if(!is.null(mcp_file)) {
+    if(isTRUE(!is.null(mcp_file) & !is.na(mcp_file))) {
 
       mcp <- sfarrow::st_read_parquet(mcp_file)
 
