@@ -148,8 +148,9 @@ reg_taxa <- function(presence
     {if(!any(is.na(distrib_file)|is.null(distrib_file))) dplyr::full_join(., distrib_dist)
       else dplyr::mutate(., in_region = distrib_dist <= buf|in_region)
     } %>%
-    {if(use_mcp) dplyr::full_join(., mcp_dist)
-      else dplyr::mutate(., in_region = mcp_dist <= buf|in_region)
+    {if(use_mcp) dplyr::full_join(., mcp_dist) |>
+        dplyr::mutate(., in_region = mcp_dist <= buf|in_region)
+      else .
     } %>%
     dplyr::select(tidyr::any_of(c("taxa", "pres_dist", "distrib_dist", "in_region"))) %>%
     dplyr::distinct() %>%
