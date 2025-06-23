@@ -147,8 +147,9 @@ reg_taxa <- function(presence
   # Relevant taxa to region ----
   pres_distrib <- pres_dist %>%
     dplyr::mutate(in_region = pres_dist <= buf) %>%
-    {if(!any(is.na(distrib_file)|is.null(distrib_file))) dplyr::full_join(., distrib_dist)
-      else dplyr::mutate(., in_region = distrib_dist <= buf|in_region)
+    {if(!any(is.na(distrib_file)|is.null(distrib_file))) dplyr::full_join(., distrib_dist) |>
+        dplyr::mutate(., in_region = distrib_dist <= buf|in_region)
+      else .
     } %>%
     {if(use_mcp) dplyr::full_join(., mcp_dist) |>
         dplyr::mutate(., in_region = mcp_dist <= buf|in_region)
