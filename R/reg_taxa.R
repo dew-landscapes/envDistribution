@@ -151,7 +151,7 @@ reg_taxa <- function(presence
         dplyr::mutate(., in_region = distrib_dist <= buf|in_region)
       else .
     } %>%
-    {if(use_mcp) dplyr::full_join(., mcp_dist) |>
+    {if(use_mcp & nrow(pres) >= 3) dplyr::full_join(., mcp_dist) |>
         dplyr::mutate(., in_region = mcp_dist <= buf|in_region)
       else .
     } %>%
