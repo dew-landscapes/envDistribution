@@ -21,45 +21,52 @@
 #' @export
 #'
 
-  make_mcp <- function(presence
-                       , out_file
-                       , force_new = FALSE
-                       , pres_x = "long"
-                       , pres_y = "lat"
-                       , in_crs = 4326
-                       , out_crs = in_crs
-                       , buf = 0
-                       , clip = NULL
-                       ) {
+make_mcp <- function(presence
+                     , out_file
+                     , force_new = FALSE
+                     , pres_x = "long"
+                     , pres_y = "lat"
+                     , in_crs = 4326
+                     , out_crs = in_crs
+                     , buf = 0
+                     , clip = NULL
+) {
 
-    run <- if(file.exists(out_file)) force_new else TRUE
+  run <- if(file.exists(out_file)) force_new else TRUE
 
-    out_file <- gsub(paste0(tools::file_ext(out_file),"$"), "", out_file)
-    out_file <- gsub("\\.$", "", out_file)
-    out_file <- paste0(out_file, ".parquet")
+  out_file <- gsub(paste0(tools::file_ext(out_file),"$"), "", out_file)
+  out_file <- gsub("\\.$", "", out_file)
+  out_file <- paste0(out_file, ".parquet")
 
-    if(run) {
+  if(run) {
 
-      fs::dir_create(dirname(out_file))
+    fs::dir_create(dirname(out_file))
+
+    suppressMessages({
+
+      sf::sf_use_s2(FALSE)
 
       res <- presence %>%
         dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x)) %>%
         sf::st_as_sf(coords = c(pres_x, pres_y)
                      , crs = in_crs
-                     ) %>%
-        sf::st_transform(crs = out_crs) %>%
-        sf::st_union() %>%
+        ) %>%
+        sf::st_union() |>
         sf::st_convex_hull() %>%
         sf::st_sf() %>%
-        sf::st_buffer(buf)
+        {if(buf != 0) sf::st_buffer(., buf) else .} %>%
+        sf::st_make_valid()
 
       if(!is.null(clip)) {
 
-        if(all(sf::st_intersects(res, clip, sparse = FALSE))) {
+        if(all(sf::st_intersects(res, sf::st_transform(clip, crs = in_crs), sparse = FALSE))) {
 
           res <- res %>%
             sf::st_intersection(clip %>%
-                                  sf::st_transform(crs = out_crs) %>%
+                                  sf::st_transform(crs = in_crs) %>%
+                                  sf::st_make_valid() %>%
+                                  dplyr::rename(geometry = attr(., "sf_column")) |>
+                                  sf::st_set_geometry("geometry") %>%
                                   sf::st_make_valid()
             )
 
@@ -67,14 +74,19 @@
 
       }
 
-      if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
+    })
 
-    } else {
+    res <- res %>%
+      sf::st_transform(crs = out_crs)
 
-      res <- sfarrow::st_read_parquet(out_file)
+    if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
 
-    }
+  } else {
 
-    return(res)
+    res <- sfarrow::st_read_parquet(out_file)
 
   }
+
+  return(res)
+
+}
