@@ -77,7 +77,8 @@ make_mcp <- function(presence
     })
 
     res <- res %>%
-      sf::st_transform(crs = out_crs)
+      sf::st_transform(crs = out_crs) %>%
+      sf::st_make_valid()
 
     if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
 
