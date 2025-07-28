@@ -1,6 +1,6 @@
 #' Find file path to relevant taxa distribution (geographic range) parquet files.
 #'
-#' For use inside filter_by_distribution and fix_spatial_taxonomy functions,
+#' For use by filter_by_distribution and fix_spatial_taxonomy functions,
 #' and for any other situation needing to return relevant distribution file paths per taxa (e.g. for aoi-taxa and dist in envPIA).
 #'
 #' @param distrib_dir Directory path. Directory containing distribution layers.
@@ -32,8 +32,8 @@
 #' @export
 #'
 
-dists_source <- function(distrib_dir = fs::path("H:","data"),
-                         sources = c("other","epbc","expert","bsa","redlist"),
+dists_source <- function(distrib_dir = fs::path("H:", "data"),
+                         sources = c("epbc", "expert", "bsa", "seed_centre", "redlist"),
                          source_scales = NULL,
                          standardise_taxonomy = FALSE,
                          target_ranks = c("species", "subspecies"),
@@ -49,7 +49,7 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
     purrr::set_names() %>%
     purrr::map( \(x)
 
-                 if(datatype=="vector"){
+                 if(datatype == "vector"){
 
                    ds_path <- fs::path(distrib_dir, datatype, "distribution") %>%
                      fs::dir_info(type = "directory", regexp = x) |>
@@ -77,7 +77,7 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
 
                  } else {
 
-                   ds_path <- fs::path(distrib_dir,datatype,"distribution","sa_ibrasub_xn____0__90",x)
+                   ds_path <- fs::path(distrib_dir, datatype, "distribution", "sa_ibrasub_xn____0__90", x)
 
                    if(fs::dir_exists(ds_path)){ # ensures no erroneous entries where source dir/files do not exist (e.g. for sources other than epbc and expert in raster)
 
@@ -85,9 +85,9 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
                        fs::dir_ls(type = "file", regexp="\\.tif$", recurse = TRUE) %>%
                        tibble::as_tibble() %>%
                        dplyr::rename(file = value) %>%
-                       dplyr::mutate(original_name = gsub(paste0("^.*/",x,"/(.*)\\.tif"), "\\1", file),
-                                     original_name = stringr::str_squish(original_name),
-                                     ds = x
+                       dplyr::mutate(original_name = gsub(paste0("^.*/",x,"/(.*)\\.tif"), "\\1", file)
+                                     , original_name = stringr::str_squish(original_name)
+                                     , ds = x
                        ) %>%
                        dplyr::relocate(original_name, ds, file)
 
@@ -122,12 +122,12 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
     if(!is.null(taxonomy)){
 
       taxa_ds <- taxa_ds %>%
-        {if("subspecies" %in% target_ranks) dplyr::left_join(.,taxonomy$subspecies$lutaxa, by="original_name")
-          else dplyr::left_join(.,taxonomy$species$lutaxa, by="original_name")
+        {if("subspecies" %in% target_ranks) dplyr::left_join(., taxonomy$subspecies$lutaxa, by="original_name")
+          else dplyr::left_join(., taxonomy$species$lutaxa, by = "original_name")
         } %>%
         dplyr::filter(returned_rank %in% target_ranks) %>%
-        {if(rm_ssp_mismatches) dplyr::filter(.,!(original_is_tri & returned_rank == "species")) else .} %>%
-        dplyr::select(tidyr::any_of(c("taxa","ds","file","scale")))
+        {if(rm_ssp_mismatches) dplyr::filter(., !(original_is_tri & returned_rank == "species")) else .} %>%
+        dplyr::select(tidyr::any_of(c("taxa", "ds", "file", "scale")))
 
     } else {
 
@@ -145,10 +145,10 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
 
     taxa_ds <- taxa_ds %>%
       dplyr::mutate(ds = factor(ds, levels = sources, ordered = TRUE)) %>%
-      {if(!is.null(source_scales)) dplyr::group_by(.,dplyr::pick(tidyr::all_of(c(taxa_col, "scale")))) else dplyr::group_by(.,dplyr::pick(tidyr::all_of(taxa_col)))} %>%
+      {if(!is.null(source_scales)) dplyr::group_by(., dplyr::pick(tidyr::all_of(c(taxa_col, "scale")))) else dplyr::group_by(.,dplyr::pick(tidyr::all_of(taxa_col)))} %>%
       dplyr::filter(ds == min(ds)) %>%
       dplyr::ungroup() %>%
-      dplyr::select(tidyr::any_of(c(taxa_col, "ds", "file","scale"))) %>%
+      dplyr::select(tidyr::any_of(c(taxa_col, "ds", "file", "scale"))) %>%
       dplyr::arrange(taxa_col)
 
   }
@@ -158,7 +158,7 @@ dists_source <- function(distrib_dir = fs::path("H:","data"),
 
     taxa_ds <- taxa_ds %>%
       tidyr::pivot_wider(id_cols = taxa_col, names_from = scale, values_from = file, values_fill = NULL, values_fn = list) %>%
-      dplyr::mutate(across(tidyr::all_of(unique(source_scales)), ~replace(., lengths(.) == 0, NA)))
+      dplyr::mutate(across(tidyr::all_of(unique(source_scales)), ~ replace(., lengths(.) == 0, NA)))
 
   }
 
