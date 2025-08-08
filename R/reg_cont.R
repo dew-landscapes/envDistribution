@@ -205,11 +205,11 @@ reg_cont <- function(taxa
       dplyr::bind_rows(mcp_no_region) %>%
       {if("geometry" %in% names(.)) sf::st_set_geometry(.,NULL) else .} %>%
       tidyr::pivot_wider(names_from = "type",names_prefix = "EOO_",values_from = "EOO") %>%
-      {if(.$EOO_tot < .$EOO_noreg) dplyr::mutate(., EOO_tot1 = EOO_tot # to deal with obscure error where larger EOO_tot poly is returning smaller area than smaller EOO_noreg poly
-                                             , EOO_tot = EOO_noreg
-                                             , EOO_noreg = EOO_tot1
+      dplyr::mutate(EOO_tot1 = EOO_tot # to deal with obscure error where larger EOO_tot poly is returning smaller area than smaller EOO_noreg poly
+                    , EOO_tot = ifelse(EOO_tot < EOO_noreg, EOO_noreg, EOO_tot)
+                    , EOO_noreg = ifelse(EOO_tot < EOO_noreg, EOO_tot1, EOO_noreg)
       ) |>
-          dplyr::select(-EOO_tot1) else . } |>
+      dplyr::select(-EOO_tot1) |>
       dplyr::mutate(EOO_inreg = EOO_tot-EOO_noreg # region contribution to range EOO
                     , EOO_regpc = EOO_inreg/EOO_tot*100
       )
