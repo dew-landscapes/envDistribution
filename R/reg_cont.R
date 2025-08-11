@@ -191,7 +191,13 @@ reg_cont <- function(taxa
       }
 
 
-    } else {
+    } else if(nrow(dplyr::filter(df,region=="noreg"))<3 & nrow(dplyr::filter(df,region=="inreg"))>=3) { # cases where > 3 occurrences & 100% in region, i.e. can call EOO outside region zero
+
+      mcp_no_region <- tibble::tibble(EOO=0,
+                                      type="noreg"
+      )
+
+    } else { # cases where < 3 total occurrences or < 3 occurrences outside region (i.e. can't create mcp and can't call EOO oustide region zero, as occurrences could be outside region)
 
       mcp_no_region <- tibble::tibble(EOO=NA,
                                       type="noreg"
@@ -206,8 +212,8 @@ reg_cont <- function(taxa
       {if("geometry" %in% names(.)) sf::st_set_geometry(.,NULL) else .} %>%
       tidyr::pivot_wider(names_from = "type",names_prefix = "EOO_",values_from = "EOO") %>%
       dplyr::mutate(EOO_tot1 = EOO_tot # to deal with obscure error where larger EOO_tot poly is returning smaller area than smaller EOO_noreg poly
-                    , EOO_tot = ifelse(EOO_tot < EOO_noreg, EOO_noreg, EOO_tot)
-                    , EOO_noreg = ifelse(EOO_tot < EOO_noreg, EOO_tot1, EOO_noreg)
+                    , EOO_tot = ifelse(isTRUE(EOO_tot < EOO_noreg), EOO_noreg, EOO_tot)
+                    , EOO_noreg = ifelse(isTRUE(EOO_tot < EOO_noreg), EOO_tot1, EOO_noreg)
       ) |>
       dplyr::select(-EOO_tot1) |>
       dplyr::mutate(EOO_inreg = EOO_tot-EOO_noreg # region contribution to range EOO
