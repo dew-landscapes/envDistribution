@@ -54,6 +54,7 @@ make_mcp <- function(presence
         ) %>%
         sf::st_union() |>
         sf::st_convex_hull() %>%
+        sf::st_sf() %>%
         {if(!is.null(dens_int)) (.) |> terra::vect() |> terra::densify(dens_int) |> sf::st_as_sf() else (.)} %>%
         {if(buf != 0) sf::st_buffer(., buf) else .} %>%
         sf::st_make_valid()
