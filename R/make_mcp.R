@@ -15,6 +15,10 @@
 #' predictors
 #' @param buf Distance in metres to buffer the mcp
 #' @param clip sf to clip the mcp
+#' @param dens_int Numeric. `terra::densify()` `interval` argument ("positive
+#' number, specifying the desired minimum distance between nodes. The unit is
+#' meter for lonlat data, and in the linear unit of the crs for planar data").
+#' Set to `NULL` to not densify.
 #'
 #' @return sf. `out_file` saved.
 #'
@@ -30,11 +34,8 @@ make_mcp <- function(presence
                      , out_crs = in_crs
                      , buf = 0
                      , clip = NULL
-) {
-
-  out_file <- gsub(paste0(tools::file_ext(out_file),"$"), "", out_file)
-  out_file <- gsub("\\.$", "", out_file)
-  out_file <- paste0(out_file, ".parquet")
+                     , dens_int = NULL
+                     ) {
 
   run <- if(file.exists(out_file)) force_new else TRUE
 
@@ -53,11 +54,20 @@ make_mcp <- function(presence
         ) %>%
         sf::st_union() |>
         sf::st_convex_hull() %>%
-        sf::st_sf() %>%
+        {if(!is.null(dens_int)) (.) |> terra::vect() |> terra::densify(dens_int) |> sf::st_as_sf() else (.)} %>%
         {if(buf != 0) sf::st_buffer(., buf) else .} %>%
         sf::st_make_valid()
 
       if(!is.null(clip)) {
+
+        if(!is.null(dens_int)) {
+
+          clip <- clip |>
+            terra::vect() |>
+            terra::densify(dens_int) |>
+            sf::st_as_sf()
+
+        }
 
         if(all(sf::st_intersects(res, sf::st_transform(clip, crs = in_crs), sparse = FALSE))) {
 
