@@ -45,13 +45,14 @@ make_mcp <- function(presence
 
     suppressMessages({
 
-      sf::sf_use_s2(FALSE)
+      #sf::sf_use_s2(FALSE)
 
       res <- presence %>%
         dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x)) %>%
         sf::st_as_sf(coords = c(pres_x, pres_y)
                      , crs = in_crs
         ) %>%
+        sf::st_transform(crs = out_crs) %>%
         sf::st_union() |>
         sf::st_convex_hull() %>%
         sf::st_sf() %>%
@@ -70,11 +71,11 @@ make_mcp <- function(presence
 
         }
 
-        if(all(sf::st_intersects(res, sf::st_transform(clip, crs = in_crs), sparse = FALSE))) {
+        if(all(sf::st_intersects(res, sf::st_transform(clip, crs = out_crs), sparse = FALSE))) {
 
           res <- res %>%
             sf::st_intersection(clip %>%
-                                  sf::st_transform(crs = in_crs) %>%
+                                  sf::st_transform(crs = out_crs) %>%
                                   sf::st_make_valid() %>%
                                   dplyr::rename(geometry = attr(., "sf_column")) |>
                                   sf::st_set_geometry("geometry") %>%
@@ -86,10 +87,6 @@ make_mcp <- function(presence
       }
 
     })
-
-    res <- res %>%
-      sf::st_transform(crs = out_crs) %>%
-      sf::st_make_valid()
 
     if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
 
