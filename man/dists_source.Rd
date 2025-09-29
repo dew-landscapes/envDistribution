@@ -6,7 +6,7 @@
 \usage{
 dists_source(
   distrib_dir = fs::path("H:", "data"),
-  sources = c("other", "epbc", "expert", "bsa", "redlist"),
+  sources = c("epbc", "expert", "bsa", "seed_centre", "redlist"),
   source_scales = NULL,
   standardise_taxonomy = FALSE,
   target_ranks = c("species", "subspecies"),
@@ -53,6 +53,6 @@ If !is.null(source_scales), there will be a file column per scale (e.g. national
 If standardise_taxonomy == TRUE, the output taxa column will be 'taxa' and not 'original_name'.
 }
 \description{
-For use inside filter_by_distribution and fix_spatial_taxonomy functions,
+For use by filter_by_distribution and fix_spatial_taxonomy functions,
 and for any other situation needing to return relevant distribution file paths per taxa (e.g. for aoi-taxa and dist in envPIA).
 }

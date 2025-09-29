@@ -13,7 +13,8 @@ make_mcp(
   in_crs = 4326,
   out_crs = in_crs,
   buf = 0,
-  clip = NULL
+  clip = NULL,
+  dens_int = NULL
 )
 }
 \arguments{
@@ -36,6 +37,11 @@ predictors}
 \item{buf}{Distance in metres to buffer the mcp}
 
 \item{clip}{sf to clip the mcp}
+
+\item{dens_int}{Numeric. \code{terra::densify()} \code{interval} argument ("positive
+number, specifying the desired minimum distance between nodes. The unit is
+meter for lonlat data, and in the linear unit of the crs for planar data").
+Set to \code{NULL} to not densify.}
 }
 \value{
 sf. \code{out_file} saved.

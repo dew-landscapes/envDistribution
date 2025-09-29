@@ -62,7 +62,8 @@
 <span>  in_crs <span class="op">=</span> <span class="fl">4326</span>,</span>
 <span>  out_crs <span class="op">=</span> <span class="va">in_crs</span>,</span>
 <span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  clip <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  clip <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  dens_int <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -102,6 +103,13 @@ predictors</p></dd>
 
 <dt>clip</dt>
 <dd><p>sf to clip the mcp</p></dd>
+
+
+<dt>dens_int</dt>
+<dd><p>Numeric. <code><a href="https://rspatial.github.io/terra/reference/densify.html" class="external-link">terra::densify()</a></code> <code>interval</code> argument ("positive
+number, specifying the desired minimum distance between nodes. The unit is
+meter for lonlat data, and in the linear unit of the crs for planar data").
+Set to <code>NULL</code> to not densify.</p></dd>
 
 </dl></div>
     <div id="value">
