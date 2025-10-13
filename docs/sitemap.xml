@@ -1,57 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/LICENSE-text.html</loc>
-  </url>
-  <url>
-    <loc>/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>/news/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/bi_to_tri.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calc_environ.html</loc>
-  </url>
-  <url>
-    <loc>/reference/clusts.html</loc>
-  </url>
-  <url>
-    <loc>/reference/dists_source.html</loc>
-  </url>
-  <url>
-    <loc>/reference/filter_by_distribution.html</loc>
-  </url>
-  <url>
-    <loc>/reference/fix_spatial_taxonomy.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/make_grd.html</loc>
-  </url>
-  <url>
-    <loc>/reference/make_mcp.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pipe.html</loc>
-  </url>
-  <url>
-    <loc>/reference/reg_cont.html</loc>
-  </url>
-  <url>
-    <loc>/reference/reg_taxa.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/LICENSE-text.html</loc></url>
+<url><loc>/LICENSE.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/bi_to_tri.html</loc></url>
+<url><loc>/reference/calc_environ.html</loc></url>
+<url><loc>/reference/clusts.html</loc></url>
+<url><loc>/reference/dists_source.html</loc></url>
+<url><loc>/reference/filter_by_distribution.html</loc></url>
+<url><loc>/reference/fix_spatial_taxonomy.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/make_grd.html</loc></url>
+<url><loc>/reference/make_mcp.html</loc></url>
+<url><loc>/reference/pipe.html</loc></url>
+<url><loc>/reference/reg_cont.html</loc></url>
+<url><loc>/reference/reg_taxa.html</loc></url>
 </urlset>
+

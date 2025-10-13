@@ -4,7 +4,7 @@ where there may be other irrelevant trinomials occurring outside the region of i
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -32,14 +32,14 @@ where there may be other irrelevant trinomials occurring outside the region of i
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/Calamanthus/envDistribution/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
@@ -74,68 +74,68 @@ where there may be other irrelevant trinomials occurring outside the region of i
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>presence</dt>
+
+
+<dl><dt id="arg-presence">presence<a class="anchor" aria-label="anchor" href="#arg-presence"></a></dt>
 <dd><p>Cleaned and filtered dataframe of presences.</p></dd>
 
 
-<dt>distrib_file</dt>
+<dt id="arg-distrib-file">distrib_file<a class="anchor" aria-label="anchor" href="#arg-distrib-file"></a></dt>
 <dd><p>Character. File path/s for the relevant distributions per taxa. If no relevant distribution, then use NA.
 Currently, only parquet files are accepted.
 Use sfarrow::st_write_parquet to write sf objects to parquet.</p></dd>
 
 
-<dt>region_bound</dt>
+<dt id="arg-region-bound">region_bound<a class="anchor" aria-label="anchor" href="#arg-region-bound"></a></dt>
 <dd><p>sf object. Region boundary polygon.</p></dd>
 
 
-<dt>taxa</dt>
+<dt id="arg-taxa">taxa<a class="anchor" aria-label="anchor" href="#arg-taxa"></a></dt>
 <dd><p>Character. Name of the taxa. Needed for joining to taxonomy to obtain species for trinomials (see below).</p></dd>
 
 
-<dt>pres_x, pres_y</dt>
+<dt id="arg-pres-x-pres-y">pres_x, pres_y<a class="anchor" aria-label="anchor" href="#arg-pres-x-pres-y"></a></dt>
 <dd><p>Character. Name of the columns in <code>presence</code> that have
 the x and y coordinates.</p></dd>
 
 
-<dt>use_crs</dt>
+<dt id="arg-use-crs">use_crs<a class="anchor" aria-label="anchor" href="#arg-use-crs"></a></dt>
 <dd><p>Integer. Coordinate reference system (epsg code) to use as the standard for all objects in spatial joins or intersections.
 Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
 can sometimes help with spherical geometry issues. If NULL, the crs of the region_bound will be used as the standard
 (i.e. the presence coords will be converted to this crs before joining or intersecting).</p></dd>
 
 
-<dt>buf</dt>
+<dt id="arg-buf">buf<a class="anchor" aria-label="anchor" href="#arg-buf"></a></dt>
 <dd><p>Distance in metres to buffer the <code>region_bound</code>.</p></dd>
 
 
-<dt>taxonomy</dt>
+<dt id="arg-taxonomy">taxonomy<a class="anchor" aria-label="anchor" href="#arg-taxonomy"></a></dt>
 <dd><p>Taxonomy object returned by envClean::make_taxonomy in relation to the taxa.
 Must have subspecies level taxonomy.</p></dd>
 
 
-<dt>remove</dt>
+<dt id="arg-remove">remove<a class="anchor" aria-label="anchor" href="#arg-remove"></a></dt>
 <dd><p>Logical. Remove out of region taxa?</p></dd>
 
 
-<dt>use_mcp</dt>
+<dt id="arg-use-mcp">use_mcp<a class="anchor" aria-label="anchor" href="#arg-use-mcp"></a></dt>
 <dd><p>Logical. Use a minimum convex polygon (MCP) around presences to determine region overlap?</p></dd>
 
 
-<dt>mcp_file</dt>
+<dt id="arg-mcp-file">mcp_file<a class="anchor" aria-label="anchor" href="#arg-mcp-file"></a></dt>
 <dd><p>Character. If use_mcp == TRUE, optional file path of existing mcp to be used.
 If use_mcp == TRUE and mcp_file == NULL, a new mcp will be constructed from <code>presence</code>.
 Currently, only geoparquet files are accepted. Use sfarrow to convert sf objects to geoparquet.</p></dd>
 
 
-<dt>in_crs</dt>
+<dt id="arg-in-crs">in_crs<a class="anchor" aria-label="anchor" href="#arg-in-crs"></a></dt>
 <dd><p>epsg code for coordinates in <code>presence</code>.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Data frame with species column, subspecies column, and 'pres_dist',
+    <p>Data frame with species column, subspecies column, and 'pres_dist',
 'distrib_dist' (if relevant) &amp; 'mcp_dist' (if relevant) columns indicating distance
 in metres from region to closest presence, distribution and mcp respectively.
 If remove == TRUE, rows with out of region subspecies will not appear.</p>
@@ -153,15 +153,15 @@ If remove == TRUE, rows with out of region subspecies will not appear.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

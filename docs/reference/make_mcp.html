@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -31,14 +31,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/Calamanthus/envDistribution/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
@@ -69,43 +69,45 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>presence</dt>
+
+
+<dl><dt id="arg-presence">presence<a class="anchor" aria-label="anchor" href="#arg-presence"></a></dt>
 <dd><p>Cleaned and filtered dataframe of presences</p></dd>
 
 
-<dt>out_file</dt>
+<dt id="arg-out-file">out_file<a class="anchor" aria-label="anchor" href="#arg-out-file"></a></dt>
 <dd><p>Character. Path for the mcp to be saved. Will be saved by
 <code><a href="https://wcjochem.github.io/sfarrow/reference/st_write_parquet.html" class="external-link">sfarrow::st_write_parquet()</a></code>. Currently will not work very well with any
 full stop in the path. Other file types are changed to .parquet</p></dd>
 
 
-<dt>force_new</dt>
+<dt id="arg-force-new">force_new<a class="anchor" aria-label="anchor" href="#arg-force-new"></a></dt>
 <dd><p>Logical. If <code>out_file</code> exists, recreate it?</p></dd>
 
 
-<dt>pres_x, pres_y</dt>
+<dt id="arg-pres-x-pres-y">pres_x, pres_y<a class="anchor" aria-label="anchor" href="#arg-pres-x-pres-y"></a></dt>
 <dd><p>Character. Name of the columns in <code>presence</code> that have
 the x and y coordinates</p></dd>
 
 
-<dt>in_crs</dt>
+<dt id="arg-in-crs">in_crs<a class="anchor" aria-label="anchor" href="#arg-in-crs"></a></dt>
 <dd><p>epsg code for coordinates in <code>presence</code></p></dd>
 
 
-<dt>out_crs</dt>
+<dt id="arg-out-crs">out_crs<a class="anchor" aria-label="anchor" href="#arg-out-crs"></a></dt>
 <dd><p>epsg code for coordinates in output mcp. Usually the same as
 predictors</p></dd>
 
 
-<dt>buf</dt>
+<dt id="arg-buf">buf<a class="anchor" aria-label="anchor" href="#arg-buf"></a></dt>
 <dd><p>Distance in metres to buffer the mcp</p></dd>
 
 
-<dt>clip</dt>
+<dt id="arg-clip">clip<a class="anchor" aria-label="anchor" href="#arg-clip"></a></dt>
 <dd><p>sf to clip the mcp</p></dd>
 
 
-<dt>dens_int</dt>
+<dt id="arg-dens-int">dens_int<a class="anchor" aria-label="anchor" href="#arg-dens-int"></a></dt>
 <dd><p>Numeric. <code><a href="https://rspatial.github.io/terra/reference/densify.html" class="external-link">terra::densify()</a></code> <code>interval</code> argument ("positive
 number, specifying the desired minimum distance between nodes. The unit is
 meter for lonlat data, and in the linear unit of the crs for planar data").
@@ -114,9 +116,7 @@ Set to <code>NULL</code> to not densify.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>sf. <code>out_file</code> saved.</p>
+    <p>sf. <code>out_file</code> saved.</p>
     </div>
 
   </div>
@@ -131,15 +131,15 @@ Set to <code>NULL</code> to not densify.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 
