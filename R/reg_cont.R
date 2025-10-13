@@ -49,17 +49,21 @@ reg_cont <- function(taxa
     # Presences ----
     # Presence dataset for restricting AOO grid to cells that have points in region
     # & generating no region mcp for calculating impact of losing presences in region on EOO
+    sf::sf_use_s2(FALSE)
+
     df <- presence %>%
       dplyr::distinct(!!rlang::ensym(pres_y), !!rlang::ensym(pres_x)) %>%
       sf::st_as_sf(coords = c(pres_x, pres_y)
                    , crs = in_crs
                    , remove = FALSE
-      ) %>%
+      ) |>
+      sf::st_make_valid() %>%
       sf::st_join(region_bound %>%
-                    sf::st_transform(crs = in_crs) %>%
-                    dplyr::mutate(region="inreg")
+                    sf::st_transform(crs = in_crs) |>
+                    sf::st_make_valid() |>
+                    dplyr::mutate(region = "inreg")
       ) %>%
-      dplyr::mutate(region=ifelse(!is.na(region),"inreg","noreg")) %>% # for generating in and out of region stats
+      dplyr::mutate(region = ifelse(!is.na(region), "inreg", "noreg")) %>% # for generating in and out of region stats
       sf::st_make_valid()
 
     # output dir ----
