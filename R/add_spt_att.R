@@ -48,10 +48,7 @@ add_spt_att <- function(df,
                   sf::st_make_valid()
     ) |>
     sf::st_drop_geometry() |>
-    dplyr::distinct(across(!!rlang::ensym(df_x), !!rlang::ensym(df_y)
-                           , tidyr::any_of(att_cols)
-    )
-    ) %>%
+    dplyr::distinct(dplyr::across(tidyr::any_of(c(df_x, df_y, att_cols)))) %>%
     {if(!is.null(renames)) dplyr::rename(., tidyr::any_of(renames)) else .}
 
   res <- df |>
