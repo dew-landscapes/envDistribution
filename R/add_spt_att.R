@@ -51,7 +51,7 @@ add_spt_att <- function(df,
     dplyr::distinct(across(!!rlang::ensym(df_x), !!rlang::ensym(df_y)
                            , tidyr::any_of(att_cols)
     )
-    ) |>
+    ) %>%
     {if(!is.null(renames)) dplyr::rename(., tidyr::any_of(renames)) else .}
 
   res <- df |>
