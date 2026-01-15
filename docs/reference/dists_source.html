@@ -4,7 +4,7 @@ and for any other situation needing to return relevant distribution file paths p
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-
+    
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -32,14 +32,14 @@ and for any other situation needing to return relevant distribution file paths p
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/Calamanthus/envDistribution/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-
+     
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-
+      
 
       </header><div class="row">
   <div class="col-md-9 contents">
@@ -70,36 +70,34 @@ and for any other situation needing to return relevant distribution file paths p
 
     <div id="arguments">
     <h2>Arguments</h2>
-
-
-<dl><dt id="arg-distrib-dir">distrib_dir<a class="anchor" aria-label="anchor" href="#arg-distrib-dir"></a></dt>
+    <dl><dt>distrib_dir</dt>
 <dd><p>Directory path. Directory containing distribution layers.</p></dd>
 
 
-<dt id="arg-sources">sources<a class="anchor" aria-label="anchor" href="#arg-sources"></a></dt>
+<dt>sources</dt>
 <dd><p>Character vector. Distribution sources to use in the distrib_dir, i.e. EPBC, Expert, Birds SA, Redlist, or other.</p></dd>
 
 
-<dt id="arg-source-scales">source_scales<a class="anchor" aria-label="anchor" href="#arg-source-scales"></a></dt>
+<dt>source_scales</dt>
 <dd><p>Character vector. Geographic scale of the distribution sources, e.g. state or national. Needs to be the same length as sources,
 and the position needs to match the position of the source it is referring to. For example, with sources = c("epbc","expert"),
 the corresponding scale_sources would be c("national","state") where epbc is national and expert is state.
 Used where different distributions are required at different scales, e.g. state and national distributions both required in filter_by_distribution.</p></dd>
 
 
-<dt id="arg-standardise-taxonomy">standardise_taxonomy<a class="anchor" aria-label="anchor" href="#arg-standardise-taxonomy"></a></dt>
+<dt>standardise_taxonomy</dt>
 <dd><p>Logical. Does the taxonomy need to be standardised using a taxonomy object from envClean::make_taxonomy?</p></dd>
 
 
-<dt id="arg-target-ranks">target_ranks<a class="anchor" aria-label="anchor" href="#arg-target-ranks"></a></dt>
+<dt>target_ranks</dt>
 <dd><p>Character vector. Target taxonomic ranks for taxonomy standardisation. Either 'species' or 'subspecies', or both.</p></dd>
 
 
-<dt id="arg-taxonomy">taxonomy<a class="anchor" aria-label="anchor" href="#arg-taxonomy"></a></dt>
+<dt>taxonomy</dt>
 <dd><p>Taxonomy object returned by envClean::make_taxonomy to use for taxonomy standardisation.</p></dd>
 
 
-<dt id="arg-rm-ssp-mismatches">rm_ssp_mismatches<a class="anchor" aria-label="anchor" href="#arg-rm-ssp-mismatches"></a></dt>
+<dt>rm_ssp_mismatches</dt>
 <dd><p>Logical. Remove subspecies mismatches, i.e. where original name was subspecies
 but was matched to species level by envClean::make_taxonomy.
 Setting to TRUE is useful where the result is input into filter_by_distribution,
@@ -109,20 +107,22 @@ e.g. a subspecies is now a new species. Ideally, fixes should be provided for th
 to create the taxonomy object and this parameter set to FALSE.</p></dd>
 
 
-<dt id="arg-source-rank">source_rank<a class="anchor" aria-label="anchor" href="#arg-source-rank"></a></dt>
+<dt>source_rank</dt>
 <dd><p>Logical. Rank the distribution sources and filter top ranked? Ranking will be in the order given by sources vector.
 If !is.null(source_scales) &amp; source_rank == TRUE, then source ranking will done in source_scale groups,
 i.e. the highest ranked source per scale will be retained.
 Also, if standardise_taxonomy == TRUE, then ranking will be according to the standardised taxonomy.</p></dd>
 
 
-<dt id="arg-datatype">datatype<a class="anchor" aria-label="anchor" href="#arg-datatype"></a></dt>
+<dt>datatype</dt>
 <dd><p>Character. Either 'vector' (default) or 'raster'.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Data frame with relevant distribution sources (ds) and file path (file) per taxa (original_name).
+    
+
+<p>Data frame with relevant distribution sources (ds) and file path (file) per taxa (original_name).
 If !is.null(source_scales), there will be a file column per scale (e.g. national, state), instead of the single source (ds) column.
 If standardise_taxonomy == TRUE, the output taxa column will be 'taxa' and not 'original_name'.</p>
     </div>
@@ -139,15 +139,15 @@ If standardise_taxonomy == TRUE, the output taxa column will be 'taxa' and not '
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
 </div>
 
       </footer></div>
 
+  
 
 
-
-
+  
 
   </body></html>
 
