@@ -6,7 +6,7 @@
 \usage{
 dists_source(
   distrib_dir = fs::path("H:", "data"),
-  sources = c("epbc", "expert", "bsa", "seed_centre", "redlist"),
+  sources = c("epbc", "expert", "bsa", "fsa", "seed_centre", "ssp", "redlist"),
   source_scales = NULL,
   standardise_taxonomy = FALSE,
   target_ranks = c("species", "subspecies"),
