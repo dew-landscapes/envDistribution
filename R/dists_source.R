@@ -127,6 +127,7 @@ dists_source <- function(distrib_dir = fs::path("H:", "data"),
         } %>%
         dplyr::filter(returned_rank %in% target_ranks) %>%
         {if(rm_ssp_mismatches) dplyr::filter(., !(original_is_tri & returned_rank == "species")) else .} %>%
+        #{if(original_is_bi & returned_rank == "subspecies" & "subspecies" %in% target_ranks) dplyr::mutate(., taxa = species) else .} %>% # fixes Melithreptus gularis/laetior but may break others. Dealing with that example as a specific distribution fix in update_rl_dists in botw in envVec
         dplyr::select(tidyr::any_of(c("taxa", "ds", "file", "scale")))
 
     } else {
