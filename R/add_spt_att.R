@@ -61,7 +61,7 @@ add_spt_att <- function(df,
                     dplyr::summarise() |>
                     sf::st_buffer(maxdist_km*1000)
                   , left = FALSE
-                  ) |>
+      ) |>
       sf::st_join(lyr, join = st_nearest_feature) |>
       sf::st_drop_geometry()
 
@@ -69,8 +69,10 @@ add_spt_att <- function(df,
 
   xy_att <- xy_att |>
     sf::st_drop_geometry() |>
-    dplyr::anti_join(out_of_lyr, by = c(df_x, df_y)) |>
-    dplyr::bind_rows(out_of_lyr) |>
+    {if(!is.null(maxdist_km) & maxdist_km > 0 & nrow(out_of_lyr) > 0) dplyr::anti_join(., out_of_lyr
+                                                                                       , by = c(df_x, df_y)
+    ) |>
+        dplyr::bind_rows(out_of_lyr) else .} |>
     dplyr::distinct(dplyr::across(tidyr::any_of(c(df_x, df_y, att_cols)))) %>%
     {if(!is.null(renames)) dplyr::rename(., tidyr::any_of(renames)) else .}
 

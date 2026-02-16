@@ -13,7 +13,7 @@ add_spt_att(
   df_y = "lat",
   df_crs = 4326,
   use_crs = NULL,
-  buffer_km = 0
+  maxdist_km = NULL
 )
 }
 \arguments{
@@ -35,8 +35,9 @@ Using a projected coordinate system removes the sf warning around assuming coord
 can sometimes help with spherical geometry issues. If NULL, the crs of the distribution will be used as the standard
 (i.e. the \code{df} coords and \code{lyr} will be converted to this crs before joining).}
 
-\item{buffer_km}{Integer. Distance in kilometres used to buffer the \code{lyr} and attribute records in that radius.
-Use 0 for no buffer.}
+\item{maxdist_km}{Integer. Maximum distance in kilometres to attribute occurrence records outside \code{lyr}.
+Occurrence records that don't fall within the polygons in \code{lyr} but within \code{maxdist_km} will be attributed by
+the attributes in the nearest polygon in \code{lyr}.}
 }
 \value{
 Data frame equivalent to \code{df} with specified attributes from \code{lyr}.
