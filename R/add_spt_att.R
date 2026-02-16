@@ -68,7 +68,7 @@ add_spt_att <- function(df,
   }
 
   xy_att <- xy_att |>
-    sf::st_drop_geometry() |>
+    sf::st_drop_geometry() %>%
     {if(!is.null(maxdist_km) & maxdist_km > 0 & nrow(out_of_lyr) > 0) dplyr::anti_join(., out_of_lyr
                                                                                        , by = c(df_x, df_y)
     ) |>
