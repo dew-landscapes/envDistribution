@@ -14,8 +14,9 @@
 #' Using a projected coordinate system removes the sf warning around assuming coordinates are planar if they're not, and
 #' can sometimes help with spherical geometry issues. If NULL, the crs of the distribution will be used as the standard
 #' (i.e. the `df` coords and `lyr` will be converted to this crs before joining).
-#' @param buffer_km Integer. Distance in kilometres used to buffer the `lyr` and attribute records in that radius.
-#' Use 0 for no buffer.
+#' @param maxdist_km Integer. Maximum distance in kilometres to attribute occurrence records outside `lyr`.
+#' Occurrence records that don't fall within the polygons in `lyr` but within `maxdist_km` will be attributed by
+#' the attributes in the nearest polygon in `lyr`.
 #'
 #' @return Data frame equivalent to `df` with specified attributes from `lyr`.
 #'
@@ -31,7 +32,7 @@ add_spt_att <- function(df,
                         df_y = "lat",
                         df_crs = 4326,
                         use_crs = NULL,
-                        buffer_km = 0
+                        maxdist_km = NULL
 
 ){
 
@@ -44,10 +45,32 @@ add_spt_att <- function(df,
     sf::st_transform(crs = use_crs) |>
     sf::st_join(lyr |>
                   sf::st_transform(crs = use_crs) |>
-                  sf::st_buffer(buffer_km) |>
                   sf::st_make_valid()
-    ) |>
+    )
+
+  out_of_lyr <- xy_att |>
+    dplyr::filter(dplyr::if_any(tidyr::any_of(att_cols), \(x) is.na(x))) |>
+    dplyr::select(tidyr::all_of(c(df_x, df_y)))
+
+  if(!is.null(maxdist_km) & maxdist_km > 0 & nrow(out_of_lyr) > 0) {
+
+    library(sf)
+
+    out_of_lyr <- out_of_lyr %>%
+      sf::st_join(lyr |>
+                    dplyr::summarise() |>
+                    sf::st_buffer(maxdist_km*1000)
+                  , left = FALSE
+                  ) |>
+      sf::st_join(lyr, join = st_nearest_feature) |>
+      sf::st_drop_geometry()
+
+  }
+
+  xy_att <- xy_att |>
     sf::st_drop_geometry() |>
+    dplyr::anti_join(out_of_lyr, by = c(df_x, df_y)) |>
+    dplyr::bind_rows(out_of_lyr) |>
     dplyr::distinct(dplyr::across(tidyr::any_of(c(df_x, df_y, att_cols)))) %>%
     {if(!is.null(renames)) dplyr::rename(., tidyr::any_of(renames)) else .}
 
