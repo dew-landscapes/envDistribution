@@ -4,7 +4,8 @@
 #' e.g. add indigenous or vagrant status from a distribution layer to a data frame of taxa occurrences.
 #'
 #' @param df Data frame containing coordinate columns.
-#' @param lyr sf object with polygons containing the attributes to be added to `df`.
+#' @param lyr Character. File path/s for the layer/s with polygons containing the attributes to be added to `df`.
+#' Currently limited to accepting geoparquet files read with the sfarrow package.
 #' @param att_cols Character vector of attribute columns from `lyr` to add to `df`.
 #' @param renames Named character vector of attribute columns to rename for the output,
 #' e.g. c("spatial_ind" = "ind", "spatial_ind" = "isIndigenous").
@@ -36,6 +37,11 @@ add_spt_att <- function(df,
 
 ){
 
+  layer <- purrr::map(lyr, \(l) sfarrow::st_read_parquet(l)) |>
+    dplyr::bind_rows() |>
+    sf::st_transform(crs = use_crs) |>
+    sf::st_make_valid()
+
   xy_att <- df %>%
     dplyr::distinct(!!rlang::ensym(df_x), !!rlang::ensym(df_y)) |>
     sf::st_as_sf(coords = c(df_x, df_y)
@@ -43,10 +49,7 @@ add_spt_att <- function(df,
                  , remove = FALSE
     ) |>
     sf::st_transform(crs = use_crs) |>
-    sf::st_join(lyr |>
-                  sf::st_transform(crs = use_crs) |>
-                  sf::st_make_valid()
-    )
+    sf::st_join(layer)
 
   out_of_lyr <- xy_att |>
     dplyr::filter(dplyr::if_any(tidyr::any_of(att_cols), \(x) is.na(x))) |>
@@ -57,12 +60,12 @@ add_spt_att <- function(df,
     library(sf)
 
     out_of_lyr <- out_of_lyr %>%
-      sf::st_join(lyr |>
+      sf::st_join(layer |>
                     dplyr::summarise() |>
                     sf::st_buffer(maxdist_km*1000)
                   , left = FALSE
       ) |>
-      sf::st_join(lyr, join = st_nearest_feature) |>
+      sf::st_join(layer, join = st_nearest_feature) |>
       sf::st_drop_geometry()
 
   }
