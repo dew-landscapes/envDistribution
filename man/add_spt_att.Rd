@@ -19,7 +19,8 @@ add_spt_att(
 \arguments{
 \item{df}{Data frame containing coordinate columns.}
 
-\item{lyr}{sf object with polygons containing the attributes to be added to \code{df}.}
+\item{lyr}{Character. File path/s for the layer/s with polygons containing the attributes to be added to \code{df}.
+Currently limited to accepting geoparquet files read with the sfarrow package.}
 
 \item{att_cols}{Character vector of attribute columns from \code{lyr} to add to \code{df}.}
 
