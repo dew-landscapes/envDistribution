@@ -19,6 +19,8 @@
 #' number, specifying the desired minimum distance between nodes. The unit is
 #' meter for lonlat data, and in the linear unit of the crs for planar data").
 #' Set to `NULL` to not densify.
+#' @param unclipped_file If clip is not NULL, then the file path for writing the unclipped mcp, if desired.
+#' If clipping, but do not want to write the unclipped file, leave this as NULL.
 #'
 #' @return sf. `out_file` saved.
 #'
@@ -35,6 +37,7 @@ make_mcp <- function(presence
                      , buf = 0
                      , clip = NULL
                      , dens_int = NULL
+                     , unclipped_file = NULL
                      ) {
 
   run <- if(file.exists(out_file)) force_new else TRUE
@@ -44,6 +47,8 @@ make_mcp <- function(presence
     fs::dir_create(dirname(out_file))
 
     suppressMessages({
+
+      # create mcp ----
 
       #sf::sf_use_s2(FALSE)
 
@@ -59,6 +64,16 @@ make_mcp <- function(presence
         {if(!is.null(dens_int)) (.) |> terra::vect() |> terra::densify(dens_int) |> sf::st_as_sf() else (.)} %>%
         {if(buf != 0) sf::st_buffer(., buf) else .} %>%
         sf::st_make_valid()
+
+      # write unclipped mcp ----
+
+      if(all(!is.null(clip), !is.null(unclipped_file), isTRUE(nrow(res)>0))) {
+
+        suppressWarnings(sfarrow::st_write_parquet(res, unclipped_file))
+
+      }
+
+      # clip ----
 
       if(!is.null(clip)) {
 
@@ -87,6 +102,8 @@ make_mcp <- function(presence
       }
 
     })
+
+    # write ----
 
     if(isTRUE(nrow(res)>0)) suppressWarnings(sfarrow::st_write_parquet(res, out_file)) else res <- NA
 
