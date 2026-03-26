@@ -107,7 +107,7 @@ fix_spatial_taxonomy <- function(bio_df,
           sf::st_set_geometry(NULL) %>%
           dplyr::mutate(near_name = !!rlang::ensym(taxa_col)
                         , overlap = 1
-                        )
+          )
 
       } else {
 
@@ -172,10 +172,34 @@ fix_spatial_taxonomy <- function(bio_df,
   }
   )
 
-  # Join back to original data and update names ----
+  # fix invalid new names ----
+  # i.e. names outside of taxonomy created by substituting species part of subspecies names in erroneous or no longer used subspecies
+  corrections <- taxa_fixes |>
+    dplyr::distinct(correct_name) |>
+    dplyr::left_join(taxonomy$subspecies$taxonomy |>
+                       dplyr::distinct(taxa, species)
+                     , by = c("correct_name" = "taxa")
+    ) |>
+    # name back to species if subspecies doesn't exist
+    dplyr::mutate(updated_name = ifelse(is.na(species)
+                                        , stringr::word(correct_name, 1, 2)
+                                        , correct_name
+    )
+    ) |>
+    dplyr::distinct(correct_name, updated_name)
 
+  # Apply corrections to fixes ---
+  taxa_fixes_corrected <- taxa_fixes |>
+    dplyr::left_join(corrections) |>
+    dplyr::mutate(correct_name = ifelse(!is.na(updated_name)
+                                        , updated_name
+                                        , corrected_name)
+    ) |>
+    dplyr::select(-updated_name)
+
+  # Join back to original data and update names ----
   tax_fix_all <- bio_df %>%
-    dplyr::left_join(taxa_fixes) %>%
+    dplyr::left_join(taxa_fixes_corrected) %>%
     dplyr::mutate(!!rlang::ensym(taxa_col) := dplyr::if_else(!is.na(correct_name),
                                                              correct_name,
                                                              !!rlang::ensym(taxa_col)
