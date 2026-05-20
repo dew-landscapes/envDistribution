@@ -63,7 +63,8 @@
 <span>  out_crs <span class="op">=</span> <span class="va">in_crs</span>,</span>
 <span>  buf <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  clip <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  dens_int <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  dens_int <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  unclipped_file <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,6 +113,11 @@ predictors</p></dd>
 number, specifying the desired minimum distance between nodes. The unit is
 meter for lonlat data, and in the linear unit of the crs for planar data").
 Set to <code>NULL</code> to not densify.</p></dd>
+
+
+<dt id="arg-unclipped-file">unclipped_file<a class="anchor" aria-label="anchor" href="#arg-unclipped-file"></a></dt>
+<dd><p>If clip is not NULL, then the file path for writing the unclipped mcp, if desired.
+If clipping, but do not want to write the unclipped file, leave this as NULL.</p></dd>
 
 </dl></div>
     <div id="value">

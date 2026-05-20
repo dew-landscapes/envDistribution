@@ -2,7 +2,7 @@
 % Please edit documentation in R/fix_spatial_taxonomy.R
 \name{fix_spatial_taxonomy}
 \alias{fix_spatial_taxonomy}
-\title{Fix taxonomies based on spatial layers (i.e. in particular geographic areas).}
+\title{Fix taxonomies based on spatial layers}
 \usage{
 fix_spatial_taxonomy(
   bio_df,

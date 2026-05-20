@@ -14,7 +14,8 @@ make_mcp(
   out_crs = in_crs,
   buf = 0,
   clip = NULL,
-  dens_int = NULL
+  dens_int = NULL,
+  unclipped_file = NULL
 )
 }
 \arguments{
@@ -42,6 +43,9 @@ predictors}
 number, specifying the desired minimum distance between nodes. The unit is
 meter for lonlat data, and in the linear unit of the crs for planar data").
 Set to \code{NULL} to not densify.}
+
+\item{unclipped_file}{If clip is not NULL, then the file path for writing the unclipped mcp, if desired.
+If clipping, but do not want to write the unclipped file, leave this as NULL.}
 }
 \value{
 sf. \code{out_file} saved.

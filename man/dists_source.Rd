@@ -5,8 +5,9 @@
 \title{Find file path to relevant taxa distribution (geographic range) parquet files.}
 \usage{
 dists_source(
-  distrib_dir = fs::path("H:", "data"),
-  sources = c("epbc", "expert", "bsa", "seed_centre", "fsa", "ssp", "redlist", "haven"),
+  distrib_dir = "/projects/data",
+  sources = c("epbc", "bsa", "expert", "seed_centre", "fsa", "ssp", "redlist", "haven",
+    "states"),
   source_scales = NULL,
   standardise_taxonomy = FALSE,
   target_ranks = c("species", "subspecies"),
