@@ -36,14 +36,16 @@
 #' and not have binomials updated to these trinomials.
 #'
 #' @details
-#' Binomial occurrence records won't be updated to trinomial if they fall within multiple trinomial distributions.
+#' Binomial occurrence records won't be updated to trinomial if they fall within multiple
+#' trinomial distributions and the overlap is beyond the `overlap_thres`.
 #' This avoids updating binomials to the wrong trinomial where distributions of subspecies overlap.
 #' Distribution refers generally to all the polygons used to represent distributions,
 #' i.e. distribution files (e.g. from redlist or epbc), MCPs, or cluster polygons.
 #'
 #' @return Data frame equivalent to `presences` with 'subspecies' updated for taxa where
-#' distributions were found and did not overlap with multiple trinomials distributions,
-#' and an additional 'bi_to_tri' column indicating which records were updated.
+#' distributions were found and did not overlap beyond the `overlap_thres` with multiple
+#' trinomials distributions, and an additional 'bi_to_tri' column indicating which records
+#' were updated.
 #'
 #' @export
 #'
