@@ -7,7 +7,7 @@
 dists_source(
   distrib_dir = "/projects/data",
   sources = c("epbc", "bsa", "expert", "seed_centre", "fsa", "ssp", "redlist", "haven",
-    "states"),
+    "afd", "states"),
   source_scales = NULL,
   standardise_taxonomy = FALSE,
   target_ranks = c("species", "subspecies"),
