@@ -22,6 +22,13 @@
 #' can sometimes help with spherical geometry issues. If NULL, the crs of the distribution will be used as the standard
 #' (i.e. the `presences` will be converted to this crs before joining or intersecting).
 #' @param buf Integer. Distance in metres to buffer the distribution.
+#' @param buf_override Character vector. Vector of character strings representing distribution sources reflected in file paths
+#' for sources that should not be buffered. Used to override the buffer for particular distribution sources where buffering may not be relevant.
+#' For example, EPBC distributions already include a 'may occur' area, and if these are stored in a directory called 'epbc_dists',
+#' then can use this string to override the buffer for taxa with these distributions.
+#' @param state_poly sf object. Optional polygon representing the state boundary for erasing the state
+#' section of a national distribution and replacing it with the state distribution.
+#' For use where state distributions are of greater resolution or accuracy.
 #' @param clust_dist Integer. Distance to base clusters on in clust function if `use_clust` = TRUE.
 #' Needs to be in the units of the projected crs supplied in `use_crs`, e.g. metres.
 #' @param overlap_thres Integer. Percent threshold corresponding to the area of overlap between distributions
@@ -61,6 +68,8 @@ bi_to_tri <- function(species
                       , pres_crs = 4326
                       , use_crs = NULL
                       , buf = 0
+                      , buf_override = NULL
+                      , state_poly = NULL
                       , clust_dist = 50000
                       , overlap_thres = 50
                       , overrides = NULL
@@ -93,22 +102,151 @@ bi_to_tri <- function(species
         dplyr::pull(subspecies) |>
         purrr::map(\(x) {
 
-          dist <- distrib_files |>
-            dplyr::filter(subspecies == x) |>
-            dplyr::pull(file) |>
-            purrr::map(\(f) sfarrow::st_read_parquet(f)) |>
-            dplyr::bind_rows() |>
-            dplyr::summarise() |>
-            sf::st_make_valid() |>
+          dist_prep <- distrib_files |>
+            dplyr::filter(subspecies == x)
+
+          if(!is.null(dist_prep$state)) {
+
+            dist <- dist_prep |>
+              dplyr::pull(state) |>
+              purrr::map(\(f) sfarrow::st_read_parquet(f)) |>
+              dplyr::bind_rows() |>
+              dplyr::summarise() |>
+              sf::st_make_valid() |>
+              #nngeo::st_remove_holes() |>
+              sf::st_make_valid() %>%
+              {if(!is.null(use_crs)) sf::st_transform(.,crs = use_crs) else .} %>%
+              # sf::st_buffer(5) %>% # to remove slivers
+              {if(!is.null(state_poly))
+                sf::st_intersection(., state_poly |>
+                                      # sf::st_buffer(5) |> # to remove slivers - can't use otherwise causes misalignment of lines for non-overlapping edges calculation
+                                      # sf::st_combine() |>
+                                      # sf::st_union() |>
+                                      sf::st_make_valid() %>%
+                                      {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
+                ) |>
+                  sf::st_make_valid() |>
+                  nngeo::st_remove_holes() |>
+                  sf::st_make_valid() else .} |>
+              dplyr::mutate(dist_type = "state")
+
+          }
+
+          if(!is.null(dist_prep$national)) {
+
+            dist <- dist_prep |>
+              dplyr::pull(national) |>
+              purrr::map(\(f) sfarrow::st_read_parquet(f)) |>
+              dplyr::bind_rows() |>
+              dplyr::summarise() |>
+              sf::st_make_valid() %>%
+              {if(!is.null(use_crs)) sf::st_transform(.,crs = use_crs) else .} |>
+              #nngeo::st_remove_holes() |>
+              # sf::st_buffer(5) %>%
+              sf::st_make_valid() %>%
+              {if(!is.null(state_poly) & !is.null(dist_prep$state))
+                sf::st_difference(., state_poly |>
+                                    # sf::st_buffer(5) |> # to remove slivers - can't use otherwise causes misalignment of lines for non-overlapping edges calculation
+                                    # sf::st_combine() |>
+                                    # sf::st_union() |>
+                                    sf::st_make_valid() %>%
+                                    {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
+                ) |>
+                  dplyr::bind_rows(dist) |>
+                  dplyr::summarise() |>
+                  sf::st_make_valid() |>
+                  # remove any polygons that don't intersect the state dist (removes any polygons created by buffering slivers that can't be removed by other means, e.g. Malurus cyaneus leggei)
+                  sf::st_cast("MULTIPOLYGON") |>
+                  sf::st_cast("POLYGON") |>
+                  sf::st_join(dist, left = FALSE) |>
+                  dplyr::summarise() |>
+                  sf::st_make_valid() |>
+                  nngeo::st_remove_holes() |>
+                  sf::st_make_valid()
+                else .} |>
+              dplyr::mutate(dist_type = "national")
+          }
+
+          dist <- dist |>
+            #sf::st_buffer(buf) |>
             dplyr::mutate(subspecies = x
                           , poly = "dist"
-            ) |>
-            sf::st_buffer(buf)
+            )
 
         }
         ) |>
         dplyr::bind_rows() |>
         sf::st_make_valid()
+
+      ### buffer non-overlapping parts of distribution polygons ----
+
+      if(all(nrow(tri_dist) > 1, buf > 0)) {
+
+        # all non-overlapping lines across ssp
+        # non_overlapping <- tri_dist |>
+        #   dplyr::summarise() |>
+        #   sf::st_make_valid() |>
+        #   nngeo::st_remove_holes() |> # only do here for lines to deal with slivers, otherwise risks losing genuine holes in polygon distributions
+        #   sf::st_make_valid() |>
+        #   sf::st_cast("MULTIPOLYGON") |>
+        #   sf::st_cast("MULTILINESTRING") |>
+        #   sf::st_cast("LINESTRING")
+
+        # non-overlapping lines per ssp, buffered & combined with polys
+        tri_dist <- tri_dist |>
+          sf::st_drop_geometry() |>
+          dplyr::distinct(subspecies) |>
+          dplyr::pull(subspecies) |>
+          purrr::map(\(s) {
+
+            dist_prep <- distrib_files |>
+              dplyr::filter(subspecies == s)
+
+            if(any(grepl(paste(buf_override, collapse = "|"), dist_prep$national))
+               |any(grepl(paste(buf_override, collapse = "|"), dist_prep$state))
+            ) buf <- 0 else buf
+
+            this_ssp_poly <- tri_dist |>
+              dplyr::filter(subspecies == s)
+
+            other_ssp_polys <- tri_dist |>
+              dplyr::filter(subspecies != s) #|>
+            #nngeo::st_remove_holes()
+
+            this_ssp_buf <- this_ssp_poly |>
+              #nngeo::st_remove_holes() |>
+              rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |> # need an extra erase here as otherwise can buffer some edges that overlap other dists
+              sf::st_make_valid() |>
+              sf::st_buffer(buf) |>
+              sf::st_make_valid() |>
+              rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |>
+              #nngeo::st_remove_holes() |>  # only do here for lines to deal with slivers, otherwise risks losing genuine holes in polygon distributions
+              sf::st_make_valid() |>
+              # sf::st_cast("MULTIPOLYGON") |>
+              # sf::st_cast("MULTILINESTRING") |>
+              # sf::st_cast("LINESTRING") |>
+              # sf::st_intersection(non_overlapping) |>
+              # dplyr::group_by(subspecies, poly, dist_type) |>
+              # dplyr::summarise() |>
+              # dplyr::ungroup() |>
+              # sf::st_make_valid() |>
+              # #sf::st_buffer(buf, endCapStyle = "FLAT") |>
+              dplyr::bind_rows(this_ssp_poly) |>
+              dplyr::group_by(subspecies, poly, dist_type) |>
+              dplyr::summarise() |>
+              dplyr::ungroup() |>
+              sf::st_make_valid()
+
+          }
+          ) |>
+          dplyr::bind_rows()
+
+      } else {
+
+        tri_dist <- tri_dist |>
+          sf::st_buffer(buf)
+
+      }
 
     }
 
@@ -122,7 +260,12 @@ bi_to_tri <- function(species
           dplyr::rename(tidyr::any_of(c("long" = "cell_long", "lat" = "cell_lat"))) |> # to overcome odd error of pres_x and pres_y not being accepted in make_mcp below
           dplyr::add_count(subspecies) |>
           dplyr::filter(n >= 3) |>
-          dplyr::select(-n) |>
+          dplyr::select(-n) %>%
+          # don't use mcp for subspecies with national distributions
+          {if(exists("tri_dist")) dplyr::anti_join(., tri_dist |>
+                                                     sf::st_drop_geometry() |>
+                                                     dplyr::filter(dist_type == "national")
+          ) else .} |>
           tidyr::nest(data = -c(subspecies))
 
         if(nrow(mcp_prep)) {
@@ -144,8 +287,8 @@ bi_to_tri <- function(species
             ) |>
               dplyr::mutate(subspecies = y
                             , poly = "mcp"
-              ) |>
-              sf::st_buffer(buf)
+              ) #|>
+            #sf::st_buffer(buf)
 
           }
           ) |>
@@ -201,7 +344,7 @@ bi_to_tri <- function(species
             ) %>%
             sf::st_set_geometry(NULL) %>%
             dplyr::mutate(clust = clusts(presence = .
-                                         , h = 50000
+                                         , h = clust_dist
                                          , pres_x = "X"
                                          , pres_y = "Y"
             )
@@ -235,8 +378,8 @@ bi_to_tri <- function(species
                                  , buf = buf
                                  , clip = NULL
           ) |>
-            dplyr::mutate(clust = y) |>
-            sf::st_buffer(buf)
+            dplyr::mutate(clust = y) #|>
+          #sf::st_buffer(buf)
 
         }
         ) |>
