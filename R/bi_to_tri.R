@@ -114,15 +114,10 @@ bi_to_tri <- function(species
               dplyr::bind_rows() |>
               dplyr::summarise() |>
               sf::st_make_valid() |>
-              #nngeo::st_remove_holes() |>
               sf::st_make_valid() %>%
               {if(!is.null(use_crs)) sf::st_transform(.,crs = use_crs) else .} %>%
-              # sf::st_buffer(5) %>% # to remove slivers
               {if(!is.null(state_poly))
                 sf::st_intersection(., state_poly |>
-                                      # sf::st_buffer(5) |> # to remove slivers - can't use otherwise causes misalignment of lines for non-overlapping edges calculation
-                                      # sf::st_combine() |>
-                                      # sf::st_union() |>
                                       sf::st_make_valid() %>%
                                       {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
                 ) |>
@@ -142,14 +137,9 @@ bi_to_tri <- function(species
               dplyr::summarise() |>
               sf::st_make_valid() %>%
               {if(!is.null(use_crs)) sf::st_transform(.,crs = use_crs) else .} |>
-              #nngeo::st_remove_holes() |>
-              # sf::st_buffer(5) %>%
               sf::st_make_valid() %>%
               {if(!is.null(state_poly) & !is.na(dist_prep$state))
                 sf::st_difference(., state_poly |>
-                                    # sf::st_buffer(5) |> # to remove slivers - can't use otherwise causes misalignment of lines for non-overlapping edges calculation
-                                    # sf::st_combine() |>
-                                    # sf::st_union() |>
                                     sf::st_make_valid() %>%
                                     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
                 ) |>
@@ -183,17 +173,6 @@ bi_to_tri <- function(species
 
       if(all(nrow(tri_dist) > 1, buf > 0)) {
 
-        # all non-overlapping lines across ssp
-        # non_overlapping <- tri_dist |>
-        #   dplyr::summarise() |>
-        #   sf::st_make_valid() |>
-        #   nngeo::st_remove_holes() |> # only do here for lines to deal with slivers, otherwise risks losing genuine holes in polygon distributions
-        #   sf::st_make_valid() |>
-        #   sf::st_cast("MULTIPOLYGON") |>
-        #   sf::st_cast("MULTILINESTRING") |>
-        #   sf::st_cast("LINESTRING")
-
-        # non-overlapping lines per ssp, buffered & combined with polys
         tri_dist <- tri_dist |>
           sf::st_drop_geometry() |>
           dplyr::distinct(subspecies) |>
@@ -211,32 +190,30 @@ bi_to_tri <- function(species
               dplyr::filter(subspecies == s)
 
             other_ssp_polys <- tri_dist |>
-              dplyr::filter(subspecies != s) #|>
-            #nngeo::st_remove_holes()
+              dplyr::filter(subspecies != s)
 
-            this_ssp_buf <- this_ssp_poly |>
-              #nngeo::st_remove_holes() |>
-              rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |> # need an extra erase here as otherwise can buffer some edges that overlap other dists
-              sf::st_make_valid() |>
-              sf::st_buffer(buf) |>
-              sf::st_make_valid() |>
-              rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |>
-              #nngeo::st_remove_holes() |>  # only do here for lines to deal with slivers, otherwise risks losing genuine holes in polygon distributions
-              sf::st_make_valid() |>
-              # sf::st_cast("MULTIPOLYGON") |>
-              # sf::st_cast("MULTILINESTRING") |>
-              # sf::st_cast("LINESTRING") |>
-              # sf::st_intersection(non_overlapping) |>
-              # dplyr::group_by(subspecies, poly, dist_type) |>
-              # dplyr::summarise() |>
-              # dplyr::ungroup() |>
-              # sf::st_make_valid() |>
-              # #sf::st_buffer(buf, endCapStyle = "FLAT") |>
-              dplyr::bind_rows(this_ssp_poly) |>
-              dplyr::group_by(subspecies, poly, dist_type) |>
-              dplyr::summarise() |>
-              dplyr::ungroup() |>
-              sf::st_make_valid()
+            within <- all(sf::st_within(this_ssp_poly, other_ssp_polys, sparse = FALSE))
+
+            if(!within) {
+
+              this_ssp_buf <- this_ssp_poly |>
+                rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |> # need an extra erase here as otherwise can buffer some edges that overlap other dists
+                sf::st_make_valid() |>
+                sf::st_buffer(buf) |>
+                sf::st_make_valid() |>
+                rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |>
+                sf::st_make_valid() |>
+                dplyr::bind_rows(this_ssp_poly) |>
+                dplyr::group_by(subspecies, poly, dist_type) |>
+                dplyr::summarise() |>
+                dplyr::ungroup() |>
+                sf::st_make_valid()
+
+            } else {
+
+              this_ssp_buf <- this_ssp_poly
+
+            }
 
           }
           ) |>
