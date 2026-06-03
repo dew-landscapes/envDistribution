@@ -192,7 +192,9 @@ bi_to_tri <- function(species
               dplyr::filter(subspecies == s)
 
             other_ssp_polys <- tri_dist |>
-              dplyr::filter(subspecies != s)
+              dplyr::filter(subspecies != s) |>
+              dplyr::summarise() |>
+              sf::st_make_valid()
 
             within <- any(sf::st_within(this_ssp_poly
                                         , other_ssp_polys |>
