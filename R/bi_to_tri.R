@@ -118,6 +118,7 @@ bi_to_tri <- function(species
               {if(!is.null(use_crs)) sf::st_transform(.,crs = use_crs) else .} %>%
               {if(!is.null(state_poly))
                 sf::st_intersection(., state_poly |>
+                                      dplyr::select(geometry) |>
                                       sf::st_make_valid() %>%
                                       {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
                 ) |>
@@ -140,6 +141,7 @@ bi_to_tri <- function(species
               sf::st_make_valid() %>%
               {if(!is.null(state_poly) & !is.na(dist_prep$state))
                 sf::st_difference(., state_poly |>
+                                    dplyr::select(geometry) |>
                                     sf::st_make_valid() %>%
                                     {if(!is.null(use_crs)) sf::st_transform(., crs = use_crs) else .}
                 ) |>
@@ -192,7 +194,12 @@ bi_to_tri <- function(species
             other_ssp_polys <- tri_dist |>
               dplyr::filter(subspecies != s)
 
-            within <- all(sf::st_within(this_ssp_poly, other_ssp_polys, sparse = FALSE))
+            within <- any(sf::st_within(this_ssp_poly
+                                        , other_ssp_polys |>
+                                          sf::st_buffer(1) # small buffer to encapsulate single regions completely within multi-regions that otherwise doesn't trigger st_within, e.g. KI & MLR herbarium regions within whole state.
+                                        , sparse = FALSE
+            )
+            )
 
             if(!within) {
 
