@@ -6,7 +6,8 @@
 #' Must contain a 'subspecies' column and x, y coordinate columns corresponding to the names
 #' in `pres_x` & `pres_y`. For binomial presences 'subspecies' should be NA.
 #' @param distrib_files Data frame of relevant distribution file paths for all the subspecies
-#' (e.g. for distributions sourced from redlist, epbc etc). If no relevant distribution, then use NA.
+#' (e.g. for distributions sourced from redlist, epbc etc). This must contain a 'subspecies' field, and
+#' state' and 'national' fields for state and national distribution files. If no relevant distribution, then use NA.
 #' Currently, only geoparquet files are accepted. Use sfarrow::st_write_parquet to write sf objects to parquet.
 #' @param use_mcp Logical. Use a minimum convex polygon (MCP) around presences to determine relevant trinomials?
 #' @param mcp_files If use_mcp == TRUE, optional data frame of file paths of existing mcp files to be used.
@@ -105,7 +106,7 @@ bi_to_tri <- function(species
           dist_prep <- distrib_files |>
             dplyr::filter(subspecies == x)
 
-          if(!is.null(dist_prep$state)) {
+          if(!is.na(dist_prep$state)) {
 
             dist <- dist_prep |>
               dplyr::pull(state) |>
@@ -132,7 +133,7 @@ bi_to_tri <- function(species
 
           }
 
-          if(!is.null(dist_prep$national)) {
+          if(!is.na(dist_prep$national)) {
 
             dist <- dist_prep |>
               dplyr::pull(national) |>
@@ -144,7 +145,7 @@ bi_to_tri <- function(species
               #nngeo::st_remove_holes() |>
               # sf::st_buffer(5) %>%
               sf::st_make_valid() %>%
-              {if(!is.null(state_poly) & !is.null(dist_prep$state))
+              {if(!is.null(state_poly) & !is.na(dist_prep$state))
                 sf::st_difference(., state_poly |>
                                     # sf::st_buffer(5) |> # to remove slivers - can't use otherwise causes misalignment of lines for non-overlapping edges calculation
                                     # sf::st_combine() |>
