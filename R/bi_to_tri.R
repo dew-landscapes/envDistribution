@@ -196,6 +196,14 @@ bi_to_tri <- function(species
               dplyr::summarise() |>
               sf::st_make_valid()
 
+            if(FALSE) {
+
+              library(tmap)
+              tmap_mode("view")
+              tm_shape(other_ssp_polys)+tm_polygons(fill = "blue")+tm_shape(this_ssp_poly)+tm_polygons(fill = "red")
+
+            }
+
             within <- any(sf::st_within(this_ssp_poly
                                         , other_ssp_polys |>
                                           sf::st_buffer(1) # small buffer to encapsulate single regions completely within multi-regions that otherwise doesn't trigger st_within, e.g. KI & MLR herbarium regions within whole state.
@@ -205,12 +213,16 @@ bi_to_tri <- function(species
 
             if(!within) {
 
-              this_ssp_buf <- this_ssp_poly |>
-                rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |> # need an extra erase here as otherwise can buffer some edges that overlap other dists
+              this_ssp_buf <- this_ssp_poly %>%
+                # try sf::st_difference if rmapshaper::ms_erase errors with 'Not compatible with STRSXP: [type=list].'
+                # can't use sf::st_difference for all, as doesn't return the correct result for some ssp
+                {tryCatch(expr = rmapshaper::ms_erase(., other_ssp_polys, remove_slivers = TRUE)
+                          , error = function(e) sf::st_difference(., other_ssp_polys))} |> # need an extra erase here as otherwise can buffer some edges that overlap other dists
                 sf::st_make_valid() |>
                 sf::st_buffer(buf) |>
-                sf::st_make_valid() |>
-                rmapshaper::ms_erase(other_ssp_polys, remove_slivers = TRUE) |>
+                sf::st_make_valid() %>%
+                {tryCatch(expr = rmapshaper::ms_erase(., other_ssp_polys, remove_slivers = TRUE)
+                          , error = function(e) sf::st_difference(., other_ssp_polys))} |>
                 sf::st_make_valid() |>
                 dplyr::bind_rows(this_ssp_poly) |>
                 dplyr::group_by(subspecies, poly, dist_type) |>
