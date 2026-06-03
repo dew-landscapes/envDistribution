@@ -132,7 +132,8 @@ bi_to_tri <- function(species
           if(!is.na(dist_prep$national)) {
 
             dist <- dist_prep |>
-              dplyr::pull(national) |>
+              dplyr::pull(national) %>%
+              .[[1]] |>
               purrr::map(\(f) sfarrow::st_read_parquet(f)) |>
               dplyr::bind_rows() |>
               dplyr::summarise() |>
