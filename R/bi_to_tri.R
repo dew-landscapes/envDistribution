@@ -328,7 +328,7 @@ bi_to_tri <- function(species
     ## clusters ----
 
     # don't use clust where all ssp (in presences & distributions) have national distributions
-    if(use_clust) {
+    if(all(use_clust, exists("tri_dist"), nrow(tri_pres))) {
 
       use_clust <- tri_pres |>
         dplyr::distinct(subspecies) |>
