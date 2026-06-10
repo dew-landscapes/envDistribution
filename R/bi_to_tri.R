@@ -327,6 +327,24 @@ bi_to_tri <- function(species
 
     ## clusters ----
 
+    # don't use clust where all ssp (in presences & distributions) have national distributions
+    if(use_clust) {
+
+      use_clust <- tri_pres |>
+        dplyr::distinct(subspecies) |>
+        dplyr::bind_rows(tri_dist |>
+                           sf::st_drop_geometry() |>
+                           dplyr::distinct(subspecies)
+        ) |>
+        dplyr::anti_join(tri_dist |>
+                           sf::st_drop_geometry() |>
+                           dplyr::filter(dist_type == "national") |>
+                           dplyr::distinct(subspecies)
+        ) %>%
+        nrow(.) > 0
+
+    }
+
     if(all(use_clust, nrow(tri_pres), nrow(bi_pres))) {
 
       # Note: error in `hclust()`: ! size cannot be NA nor exceed 65536
