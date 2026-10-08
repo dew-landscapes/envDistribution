@@ -112,15 +112,17 @@ reg_taxa <- function(presence
 
     } else {
 
-      mcp <- envDistribution::make_mcp(presence = presence
-                                       , out_file = tempfile()
-                                       , force_new = FALSE
-                                       , pres_x = pres_x
-                                       , pres_y = pres_y
-                                       , in_crs = pres_crs
-                                       , out_crs = use_crs
-                                       , buf = 0
-                                       , clip = NULL
+      mcp <- rlang::inject(
+        envDistribution::make_mcp(presence = presence
+                                  , out_file = tempfile()
+                                  , force_new = FALSE
+                                  , pres_x = !!pres_x
+                                  , pres_y = !!pres_y
+                                  , in_crs = pres_crs
+                                  , out_crs = use_crs
+                                  , buf = 0
+                                  , clip = NULL
+        )
       )
 
     }
