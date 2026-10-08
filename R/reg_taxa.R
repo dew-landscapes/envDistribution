@@ -155,7 +155,7 @@ reg_taxa <- function(presence
         dplyr::mutate(., in_region = mcp_dist <= buf|in_region)
       else .
     } %>%
-    dplyr::select(tidyr::any_of(c("taxa", "pres_dist", "distrib_dist", "in_region"))) %>%
+    dplyr::select(tidyr::any_of(c("taxa", "pres_dist", "distrib_dist", "mcp_dist", "in_region"))) %>%
     dplyr::distinct() %>%
     {if(remove) dplyr::filter(., in_region) else .}
 
@@ -167,7 +167,7 @@ reg_taxa <- function(presence
                        dplyr::select(taxa, species)
     ) |>
     dplyr::mutate(subspecies = ifelse(returned_rank == "subspecies" & stringr::str_count(taxa, "\\w+") > 2, taxa, NA)) |> # count of words needed to overcome erroneous subspecies e.g. arising from hybrids - Acacia provincialis/retinodes
-    dplyr::select(tidyr::any_of(c("species", "subspecies", "pres_dist", "distrib_dist", "in_region"))) %>%
+    dplyr::select(tidyr::any_of(c("species", "subspecies", "pres_dist", "distrib_dist", "mcp_dist", "in_region"))) %>%
     dplyr::distinct() %>%
     {if(remove) dplyr::select(., -in_region) else .}
 
