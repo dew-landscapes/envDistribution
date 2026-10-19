@@ -122,6 +122,7 @@ fix_spatial_taxonomy <- function(bio_df,
     }
 
     # taxa record and distribution overlap (proximity) ----
+    library(sf)
 
     taxa_overlap <- taxa_xy %>%
       {if(nrow(rec_in_overlap)>0) dplyr::anti_join(., rec_in_overlap) else .} %>% # remove any records in areas where distributions overlap, so won't have their name changed (as cannot decide which taxa is correct in an overlapping area)
