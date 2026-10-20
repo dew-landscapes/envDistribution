@@ -150,6 +150,8 @@ filter_by_distribution <- function(presence,
     if(any(grepl(paste(buffer_override, collapse = "|"), file))) dist_buffer <- 0 else dist_buffer <- buffer_km*1000
 
     # if distribution overlaps data_ext_poly then join to taxa records, otherwise give taxa records NA to enable filtering later
+    library(sf) # needed to load st_is_within_distance function and avoid error with join = st_is_within_distance in st_join below
+
     xy_dists <- xy_taxa %>%
       {if(nrow(dists_de)>0) sf::st_join(., dists, join = st_is_within_distance, dist = dist_buffer)
         else dplyr::mutate(., dist_in = NA)
